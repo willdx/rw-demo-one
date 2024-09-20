@@ -38,3 +38,4 @@ next-env.d.ts
 # custom
 .env
 generated-schema.graphql
+docs
