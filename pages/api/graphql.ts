@@ -3,9 +3,9 @@ import { Neo4jGraphQL } from "@neo4j/graphql";
 import neo4j from "neo4j-driver";
 import { gql } from "graphql-tag";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
-import fs from 'fs';
-import path from 'path';
-import { printSchema } from 'graphql';
+import fs from "fs";
+import path from "path";
+import { printSchema } from "graphql";
 
 const typeDefs = gql`
   type Document {
@@ -35,10 +35,10 @@ const neoSchema = new Neo4jGraphQL({ typeDefs, driver });
 
 const createApolloServer = async () => {
   const schema = await neoSchema.getSchema();
-  
+
   // 将 schema 存储到本地文件
   const schemaString = printSchema(schema);
-  const filePath = path.join(process.cwd(), 'generated-schema.graphql');
+  const filePath = path.join(process.cwd(), "generated-schema.graphql");
   fs.writeFileSync(filePath, schemaString);
   console.log(`Schema has been written to ${filePath}`);
 
