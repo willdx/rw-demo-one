@@ -42,7 +42,40 @@ const config: Config = {
                 color: theme('colors.blue.800'),
               },
             },
+            'code::before': {
+              content: '""',
+            },
+            'code::after': {
+              content: '""',
+            },
+            'pre code': {
+              backgroundColor: 'transparent',
+              fontWeight: 'normal',
+            },
             // 添加更多自定义样式...
+            table: {
+              borderCollapse: 'collapse',
+              width: '100%',
+            },
+            'thead, tbody': {
+              borderBottom: `2px solid ${theme('colors.gray.200')}`,
+            },
+            'th, td': {
+              padding: theme('spacing.2'),
+              borderRight: `1px solid ${theme('colors.gray.200')}`,
+            },
+            'th:last-child, td:last-child': {
+              borderRight: 'none',
+            },
+            // 添加数学公式样式
+            '.math': {
+              overflow: 'auto',
+            },
+            '.math-display': {
+              display: 'block',
+              marginTop: theme('spacing.4'),
+              marginBottom: theme('spacing.4'),
+            },
           },
         },
       }),

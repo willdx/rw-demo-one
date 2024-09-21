@@ -19,7 +19,10 @@ import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
 
 const GET_DOCUMENTS = gql`
-  query Documents($where: DocumentWhere, $sort: [DocumentChildrenConnectionSort!]) {
+  query Documents(
+    $where: DocumentWhere
+    $sort: [DocumentChildrenConnectionSort!]
+  ) {
     documents(where: $where) {
       id
       fileName
@@ -109,7 +112,10 @@ interface FlowChartProps {
   onNodeClick: (content: string) => void;
 }
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[]): { nodes: Node[]; edges: Edge[] } => {
+const getLayoutedElements = (
+  nodes: Node[],
+  edges: Edge[]
+): { nodes: Node[]; edges: Edge[] } => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: "LR" });
@@ -139,7 +145,9 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]): { nodes: Node[]; edg
   };
 };
 
-const formatGraphData = (document: DocumentNode): { nodes: Node[]; edges: Edge[] } => {
+const formatGraphData = (
+  document: DocumentNode
+): { nodes: Node[]; edges: Edge[] } => {
   if (!document) return { nodes: [], edges: [] };
 
   const nodes: Node[] = [
