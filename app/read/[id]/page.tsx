@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import FlowChart from "../components/FlowChart";
-import MarkdownRenderer from "../components/MarkdownRenderer";
+import { useParams } from "next/navigation";
+import FlowChart from "../../components/FlowChart";
+import MarkdownRenderer from "../../components/MarkdownRenderer";
 
 export default function ReadPage() {
   const [selectedContent, setSelectedContent] = useState<string>("");
+  const params = useParams();
+  const id = params.id as string;
 
   return (
     <div className="fixed inset-0 flex">
       <div className="w-1/2 bg-gray-100 overflow-auto">
-        <FlowChart onNodeClick={setSelectedContent} />
+        <FlowChart onNodeClick={setSelectedContent} documentId={id} />
       </div>
       <div className="w-1/2 bg-white relative">
         <div className="absolute inset-0 overflow-auto">

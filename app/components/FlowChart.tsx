@@ -110,6 +110,7 @@ interface DocumentNode {
 
 interface FlowChartProps {
   onNodeClick: (content: string) => void;
+  documentId: string;
 }
 
 const getLayoutedElements = (
@@ -186,11 +187,11 @@ const formatGraphData = (
   return getLayoutedElements(nodes, edges);
 };
 
-const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick }) => {
+const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
   const { loading, error, data } = useQuery(GET_DOCUMENTS, {
     variables: {
       where: {
-        id: "c0477945-c54b-4c65-8980-be8dd144d277",
+        id: documentId,
       },
       sort: [
         {
