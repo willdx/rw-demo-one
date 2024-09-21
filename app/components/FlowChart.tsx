@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   MiniMap,
@@ -13,6 +13,7 @@ import {
   Edge,
   Node,
   BackgroundVariant,
+  ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
@@ -208,6 +209,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
+  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
 
   const formattedData = useMemo(() => {
     if (data?.documents?.[0]) {
@@ -220,8 +222,21 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
     if (formattedData) {
       setNodes(formattedData.nodes);
       setEdges(formattedData.edges);
+      
+      // 默认渲染根节点内容
+      if (formattedData.nodes.length > 0) {
+        const rootNode = formattedData.nodes[0];
+        onNodeClick(rootNode.data.content || "");
+      }
+      
+      // 使用 setTimeout 确保在下一个渲染周期执行 fitView
+      setTimeout(() => {
+        if (reactFlowInstance.current) {
+          reactFlowInstance.current.fitView({ padding: 0.2 });
+        }
+      }, 0);
     }
-  }, [formattedData, setNodes, setEdges]);
+  }, [formattedData, setNodes, setEdges, onNodeClick]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -247,6 +262,10 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeClick={handleNodeClick}
+      onInit={(instance) => {
+        reactFlowInstance.current = instance;
+        instance.fitView({ padding: 0.2 });
+      }}
       className="w-full h-full"
     >
       <Controls />
