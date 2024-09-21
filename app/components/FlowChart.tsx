@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
-  MiniMap,
   Controls,
   Background,
   useNodesState,
@@ -13,11 +12,11 @@ import {
   Edge,
   Node,
   BackgroundVariant,
-  ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
+import FlowChartSkeleton from "./FlowChartSkeleton";
 
 const GET_DOCUMENTS = gql`
   query Documents(
@@ -191,25 +190,14 @@ const formatGraphData = (
 const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
   const { loading, error, data } = useQuery(GET_DOCUMENTS, {
     variables: {
-      where: {
-        id: documentId,
-      },
-      sort: [
-        {
-          edge: {
-            order: "ASC",
-          },
-          node: {
-            updatedAt: "DESC",
-          },
-        },
-      ],
+      where: { id: documentId },
+      sort: [{ edge: { order: "ASC" }, node: { updatedAt: "DESC" } }],
     },
   });
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
-  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [showSkeleton, setShowSkeleton] = useState<boolean>(false);
 
   const formattedData = useMemo(() => {
     if (data?.documents?.[0]) {
@@ -219,24 +207,19 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
   }, [data]);
 
   useEffect(() => {
-    if (formattedData) {
+    let timer: NodeJS.Timeout;
+    if (loading) {
+      timer = setTimeout(() => setShowSkeleton(true), 300);
+    } else {
+      setShowSkeleton(false);
       setNodes(formattedData.nodes);
       setEdges(formattedData.edges);
-      
-      // 默认渲染根节点内容
       if (formattedData.nodes.length > 0) {
-        const rootNode = formattedData.nodes[0];
-        onNodeClick(rootNode.data.content || "");
+        onNodeClick(formattedData.nodes[0].data.content || "");
       }
-      
-      // 使用 setTimeout 确保在下一个渲染周期执行 fitView
-      setTimeout(() => {
-        if (reactFlowInstance.current) {
-          reactFlowInstance.current.fitView({ padding: 0.2 });
-        }
-      }, 0);
     }
-  }, [formattedData, setNodes, setEdges, onNodeClick]);
+    return () => clearTimeout(timer);
+  }, [loading, formattedData, setNodes, setEdges, onNodeClick]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -245,13 +228,12 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      const content = node.data.content;
-      onNodeClick(content || "");
+      onNodeClick(node.data.content || "");
     },
     [onNodeClick]
   );
 
-  if (loading) return <p>加载中...</p>;
+  if (showSkeleton) return <FlowChartSkeleton />;
   if (error) return <p>错误：{error.message}</p>;
 
   return (
@@ -262,14 +244,11 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeClick={handleNodeClick}
-      onInit={(instance) => {
-        reactFlowInstance.current = instance;
-        instance.fitView({ padding: 0.2 });
-      }}
+      fitView
+      proOptions={{ hideAttribution: true }} // 隐藏水印
       className="w-full h-full"
     >
       <Controls />
-      <MiniMap />
       <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
     </ReactFlow>
   );
