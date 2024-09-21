@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { ReactFlowProvider } from "@xyflow/react";
 import FlowChart from "../../components/FlowChart";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 
@@ -13,7 +14,9 @@ export default function ReadPage() {
   return (
     <div className="fixed inset-0 flex">
       <div className="w-1/2 bg-gray-100 overflow-auto">
-        <FlowChart onNodeClick={setSelectedContent} documentId={id} />
+        <ReactFlowProvider>
+          <FlowChart onNodeClick={setSelectedContent} documentId={id} />
+        </ReactFlowProvider>
       </div>
       <div className="w-1/2 bg-white relative">
         <div className="absolute inset-0 overflow-auto">

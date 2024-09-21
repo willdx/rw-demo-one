@@ -12,6 +12,8 @@ import {
   Edge,
   Node,
   BackgroundVariant,
+  useReactFlow,
+  ControlButton,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
@@ -115,11 +117,12 @@ interface FlowChartProps {
 
 const getLayoutedElements = (
   nodes: Node[],
-  edges: Edge[]
+  edges: Edge[],
+  direction: 'TB' | 'LR' = 'LR'
 ): { nodes: Node[]; edges: Edge[] } => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-  dagreGraph.setGraph({ rankdir: "LR" });
+  dagreGraph.setGraph({ rankdir: direction });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
@@ -198,6 +201,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [showSkeleton, setShowSkeleton] = useState<boolean>(false);
+  const { fitView } = useReactFlow();
 
   const formattedData = useMemo(() => {
     if (data?.documents?.[0]) {
@@ -233,6 +237,13 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
     [onNodeClick]
   );
 
+  const onLayout = useCallback((direction: 'TB' | 'LR') => {
+    const layoutedElements = getLayoutedElements(nodes, edges, direction);
+    setNodes(layoutedElements.nodes);
+    setEdges(layoutedElements.edges);
+    window.requestAnimationFrame(() => fitView());
+  }, [nodes, edges, setNodes, setEdges, fitView]);
+
   if (showSkeleton) return <FlowChartSkeleton />;
   if (error) return <p>错误：{error.message}</p>;
 
@@ -245,10 +256,17 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
       onConnect={onConnect}
       onNodeClick={handleNodeClick}
       fitView
-      proOptions={{ hideAttribution: true }} // 隐藏水印
+      proOptions={{ hideAttribution: true }}
       className="w-full h-full"
     >
-      <Controls />
+      <Controls>
+        <ControlButton onClick={() => onLayout('TB')} title="垂直布局">
+          TB
+        </ControlButton>
+        <ControlButton onClick={() => onLayout('LR')} title="水平布局">
+          LR
+        </ControlButton>
+      </Controls>
       <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
     </ReactFlow>
   );
