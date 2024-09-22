@@ -24,7 +24,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
-import FlowChartSkeleton from "./FlowChartSkeleton";
+import FlowChartSkeleton from "./TreeSkeleton";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 
 const GET_DOCUMENTS = gql`

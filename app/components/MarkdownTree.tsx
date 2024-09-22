@@ -17,7 +17,7 @@ import remarkParse from "remark-parse";
 import { visit } from "unist-util-visit";
 import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline"; // 更改为正确的图标
 import dagre from "dagre";
-import FlowChartSkeleton from "./FlowChartSkeleton";
+import FlowChartSkeleton from "./TreeSkeleton";
 
 const ReactFlow = dynamic(
   () => import("@xyflow/react").then((mod) => mod.ReactFlow),
@@ -129,7 +129,8 @@ const MarkdownFlowChart: React.FC<MarkdownFlowChartProps> = ({ content }) => {
 
   useEffect(() => {
     const ast = parseMarkdown(content);
-    const { nodes: initialNodes, edges: initialEdges } = astToReactFlowData(ast);
+    const { nodes: initialNodes, edges: initialEdges } =
+      astToReactFlowData(ast);
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       initialNodes,
       initialEdges,
@@ -139,11 +140,14 @@ const MarkdownFlowChart: React.FC<MarkdownFlowChartProps> = ({ content }) => {
     setEdges(layoutedEdges);
     setShowSkeleton(false);
 
-    const timer = setTimeout(() => fitView({ padding: 0.2, includeHiddenNodes: false }), 100);
+    const timer = setTimeout(
+      () => fitView({ padding: 0.2, includeHiddenNodes: false }),
+      100
+    );
     return () => clearTimeout(timer);
   }, [content, isHorizontal, fitView]);
 
-  const toggleLayout = useCallback(() => setIsHorizontal(prev => !prev), []);
+  const toggleLayout = useCallback(() => setIsHorizontal((prev) => !prev), []);
 
   if (showSkeleton) return <FlowChartSkeleton />;
 
@@ -157,8 +161,13 @@ const MarkdownFlowChart: React.FC<MarkdownFlowChartProps> = ({ content }) => {
         proOptions={{ hideAttribution: true }}
       >
         <Controls>
-          <ControlButton onClick={toggleLayout} title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}>
-            <ArrowsRightLeftIcon className={`w-4 h-4 transform ${isHorizontal ? "rotate-90" : ""}`} />
+          <ControlButton
+            onClick={toggleLayout}
+            title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}
+          >
+            <ArrowsRightLeftIcon
+              className={`w-4 h-4 transform ${isHorizontal ? "rotate-90" : ""}`}
+            />
           </ControlButton>
         </Controls>
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />

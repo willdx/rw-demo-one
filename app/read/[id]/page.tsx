@@ -3,11 +3,11 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
-import FlowChart from "../../components/FlowChart";
+import FlowChart from "../../components/NodeTree";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
-const MarkdownFlowChart = dynamic(() => import("../../components/MarkdownFlowChart"), { ssr: false });
+const MarkdownFlowChart = dynamic(() => import("../../components/MarkdownTree"), { ssr: false });
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const [selectedContent, setSelectedContent] = useState<string>("");
