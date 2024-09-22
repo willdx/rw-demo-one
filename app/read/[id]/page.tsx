@@ -5,33 +5,62 @@ import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
 import FlowChart from "../../components/NodeTree";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ChevronLeftIcon, ChevronRightIcon, DocumentTextIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
 
 const MarkdownFlowChart = dynamic(() => import("../../components/MarkdownTree"), { ssr: false });
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const [selectedContent, setSelectedContent] = useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
 
-  const togglePanel = useCallback((setter: React.Dispatch<React.SetStateAction<boolean>>) => 
-    () => setter(prev => !prev), []);
+  const togglePanel = useCallback(() => setLeftCollapsed(prev => !prev), []);
 
   const panelClass = (collapsed: boolean) => `
     transition-all duration-300 ease-in-out
-    ${collapsed ? "w-0" : "w-1/4"}
+    ${collapsed ? "w-0" : "w-1/3"}
     border-gray-200 dark:border-gray-700 relative overflow-hidden
   `;
 
-  const buttonClass = "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-md p-1 shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 h-16";
+  const buttonClass = "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-md shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-400";
+
+  const tabButtonClass = (isActive: boolean) => `
+    ${isActive ? "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}
+    flex items-center justify-center px-6 py-3 text-sm font-medium transition-all duration-200 ease-in-out flex-1
+  `;
 
   return (
     <div className="h-screen flex relative overflow-hidden">
       <div className={`${panelClass(leftCollapsed)} border-r`}>
-        <div className={`w-full h-full ${leftCollapsed ? "invisible" : "visible"}`}>
-          <ReactFlowProvider>
-            <FlowChart onNodeClick={setSelectedContent} documentId={params.id} />
-          </ReactFlowProvider>
+        <div className={`w-full h-full flex flex-col ${leftCollapsed ? "invisible" : "visible"}`}>
+          <div className="flex bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab("node")}
+              className={tabButtonClass(activeTab === "node")}
+            >
+              <DocumentChartBarIcon className="w-5 h-5 mr-2" />
+              节点树
+            </button>
+            <button
+              onClick={() => setActiveTab("markdown")}
+              className={tabButtonClass(activeTab === "markdown")}
+            >
+              <DocumentTextIcon className="w-5 h-5 mr-2" />
+              Markdown树
+            </button>
+          </div>
+          <div className="flex-grow overflow-hidden">
+            {activeTab === "node" && (
+              <ReactFlowProvider>
+                <FlowChart onNodeClick={setSelectedContent} documentId={params.id} />
+              </ReactFlowProvider>
+            )}
+            {activeTab === "markdown" && (
+              <ReactFlowProvider>
+                <MarkdownFlowChart content={selectedContent} />
+              </ReactFlowProvider>
+            )}
+          </div>
         </div>
       </div>
 
@@ -49,30 +78,24 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
         </div>
       </div>
 
-      <div className={`${panelClass(rightCollapsed)} border-l`}>
-        <div className={`w-full h-full ${rightCollapsed ? "invisible" : "visible"}`}>
-          <ReactFlowProvider>
-            <MarkdownFlowChart content={selectedContent} />
-          </ReactFlowProvider>
-        </div>
+      <div className="absolute left-0 top-0 bottom-0 flex items-center">
+        <button
+          onClick={togglePanel}
+          className={`${buttonClass} rounded-r-md h-16`}
+        >
+          {leftCollapsed ? (
+            <ChevronRightIcon className="w-5 h-5" />
+          ) : (
+            <ChevronLeftIcon className="w-5 h-5" />
+          )}
+        </button>
       </div>
-
-      {["left", "right"].map((side) => (
-        <div key={side} className={`absolute ${side}-0 top-0 bottom-0 flex items-center`}>
-          <button
-            onClick={togglePanel(side === "left" ? setLeftCollapsed : setRightCollapsed)}
-            className={`${buttonClass} ${side === "left" ? "rounded-r-md" : "rounded-l-md"}`}
-          >
-            {(side === "left" ? leftCollapsed : rightCollapsed) ? (
-              <ChevronRightIcon className="w-5 h-5" />
-            ) : (
-              <ChevronLeftIcon className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-      ))}
     </div>
   );
 };
 
 export default ReadPage;
+
+
+
+
