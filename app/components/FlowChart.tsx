@@ -19,10 +19,7 @@ import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
 import FlowChartSkeleton from "./FlowChartSkeleton";
-import {
-  ArrowsPointingOutIcon,
-  ArrowsPointingInIcon,
-} from "@heroicons/react/24/outline";
+import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
 
 const GET_DOCUMENTS = gql`
   query Documents(
@@ -263,7 +260,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeClick={handleNodeClick}
-      fitView // 这里使用 fitView 属性
+      fitView
       proOptions={{ hideAttribution: true }}
       className="w-full h-full"
     >
@@ -272,11 +269,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
           onClick={onLayout}
           title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}
         >
-          {isHorizontal ? (
-            <ArrowsPointingInIcon className="w-4 h-4" />
-          ) : (
-            <ArrowsPointingOutIcon className="w-4 h-4" />
-          )}
+          <ArrowsRightLeftIcon className={`w-4 h-4 transform ${isHorizontal ? 'rotate-90' : ''}`} />
         </ControlButton>
       </Controls>
       <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
