@@ -1,20 +1,29 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { Node, Edge, Background, Controls, ControlButton, BackgroundVariant, useReactFlow } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import { visit } from 'unist-util-visit';
-import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline'; // 更改为正确的图标
-import dagre from 'dagre';
+import React, { useCallback, useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import {
+  Node,
+  Edge,
+  Background,
+  Controls,
+  ControlButton,
+  BackgroundVariant,
+  useReactFlow,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import { visit } from "unist-util-visit";
+import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline"; // 更改为正确的图标
+import dagre from "dagre";
+import FlowChartSkeleton from "./FlowChartSkeleton";
 
 const ReactFlow = dynamic(
-  () => import('@xyflow/react').then((mod) => mod.ReactFlow),
+  () => import("@xyflow/react").then((mod) => mod.ReactFlow),
   {
     ssr: false,
-    loading: () => <p>加载中...</p>
+    loading: () => <FlowChartSkeleton />,
   }
 );
 
@@ -37,16 +46,17 @@ const parseMarkdown = (markdown: string): ASTNode => {
   return ast as unknown as ASTNode;
 };
 
-const astToReactFlowData = (ast: ASTNode): { nodes: Node[], edges: Edge[] } => {
+const astToReactFlowData = (ast: ASTNode): { nodes: Node[]; edges: Edge[] } => {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   let id = 0;
-  const parentStack: { id: number, depth: number }[] = [];
+  const parentStack: { id: number; depth: number }[] = [];
 
-  visit(ast, 'heading', (node: ASTNode) => {
+  visit(ast, "heading", (node: ASTNode) => {
     const currentId = id++;
     const depth = node.depth || 0;
-    const label = (node.children && node.children[0] && node.children[0].value) || '';
+    const label =
+      (node.children && node.children[0] && node.children[0].value) || "";
 
     nodes.push({
       id: currentId.toString(),
@@ -54,7 +64,10 @@ const astToReactFlowData = (ast: ASTNode): { nodes: Node[], edges: Edge[] } => {
       position: { x: 0, y: 0 }, // 初始位置设为 0,0，后面会用 dagre 重新布局
     });
 
-    while (parentStack.length > 0 && parentStack[parentStack.length - 1].depth >= depth) {
+    while (
+      parentStack.length > 0 &&
+      parentStack[parentStack.length - 1].depth >= depth
+    ) {
       parentStack.pop();
     }
 
@@ -73,7 +86,11 @@ const astToReactFlowData = (ast: ASTNode): { nodes: Node[], edges: Edge[] } => {
   return { nodes, edges };
 };
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: 'TB' | 'LR' = 'TB') => {
+const getLayoutedElements = (
+  nodes: Node[],
+  edges: Edge[],
+  direction: "TB" | "LR" = "TB"
+) => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: direction });
@@ -108,44 +125,45 @@ const MarkdownFlowChart: React.FC<MarkdownFlowChartProps> = ({ content }) => {
   const [edges, setEdges] = useState<Edge[]>([]);
   const { fitView } = useReactFlow();
   const [isHorizontal, setIsHorizontal] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   useEffect(() => {
     const ast = parseMarkdown(content);
     const { nodes: initialNodes, edges: initialEdges } = astToReactFlowData(ast);
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges, isHorizontal ? 'LR' : 'TB');
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      initialNodes,
+      initialEdges,
+      isHorizontal ? "LR" : "TB"
+    );
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [content, isHorizontal]);
+    setShowSkeleton(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (nodes.length > 0) {
-        fitView({ padding: 0.2, includeHiddenNodes: false });
-      }
-    }, 100);
-
+    const timer = setTimeout(() => fitView({ padding: 0.2, includeHiddenNodes: false }), 100);
     return () => clearTimeout(timer);
-  }, [nodes, fitView]);
+  }, [content, isHorizontal, fitView]);
 
-  const onLayout = useCallback(() => {
-    setIsHorizontal(!isHorizontal);
-  }, [isHorizontal]);
+  const toggleLayout = useCallback(() => setIsHorizontal(prev => !prev), []);
+
+  if (showSkeleton) return <FlowChartSkeleton />;
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      fitView
-      fitViewOptions={{ padding: 0.2, includeHiddenNodes: false }}
-      proOptions={{ hideAttribution: true }}
-    >
-      <Controls>
-        <ControlButton onClick={onLayout} title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}>
-          <ArrowsRightLeftIcon className={`w-4 h-4 transform ${isHorizontal ? 'rotate-90' : ''}`} />
-        </ControlButton>
-      </Controls>
-      <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-    </ReactFlow>
+    <div className="relative w-full h-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        fitView
+        fitViewOptions={{ padding: 0.2, includeHiddenNodes: false }}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Controls>
+          <ControlButton onClick={toggleLayout} title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}>
+            <ArrowsRightLeftIcon className={`w-4 h-4 transform ${isHorizontal ? "rotate-90" : ""}`} />
+          </ControlButton>
+        </Controls>
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+      </ReactFlow>
+    </div>
   );
 };
 
