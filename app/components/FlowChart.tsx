@@ -19,7 +19,10 @@ import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
 import FlowChartSkeleton from "./FlowChartSkeleton";
-import { ArrowsPointingOutIcon, ArrowsPointingInIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowsPointingOutIcon,
+  ArrowsPointingInIcon,
+} from "@heroicons/react/24/outline";
 
 const GET_DOCUMENTS = gql`
   query Documents(
@@ -119,7 +122,7 @@ interface FlowChartProps {
 const getLayoutedElements = (
   nodes: Node[],
   edges: Edge[],
-  direction: 'TB' | 'LR' = 'LR'
+  direction: "TB" | "LR" = "LR"
 ): { nodes: Node[]; edges: Edge[] } => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -228,19 +231,20 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
   }, [loading, formattedData, setNodes, setEdges, onNodeClick]);
 
   const onConnect = useCallback(
-    (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds as Edge[])),
+    (params: Edge | Connection) =>
+      setEdges((eds) => addEdge(params, eds as Edge[])),
     [setEdges]
   );
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      onNodeClick(node.data.content as string || "");
+      onNodeClick((node.data.content as string) || "");
     },
     [onNodeClick]
   );
 
   const onLayout = useCallback(() => {
-    const direction = isHorizontal ? 'TB' : 'LR';
+    const direction = isHorizontal ? "TB" : "LR";
     setIsHorizontal(!isHorizontal);
     const layoutedElements = getLayoutedElements(nodes, edges, direction);
     setNodes(layoutedElements.nodes);
@@ -264,8 +268,15 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
       className="w-full h-full"
     >
       <Controls>
-        <ControlButton onClick={onLayout} title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}>
-          {isHorizontal ? <ArrowsPointingInIcon className="w-4 h-4" /> : <ArrowsPointingOutIcon className="w-4 h-4" />}
+        <ControlButton
+          onClick={onLayout}
+          title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}
+        >
+          {isHorizontal ? (
+            <ArrowsPointingInIcon className="w-4 h-4" />
+          ) : (
+            <ArrowsPointingOutIcon className="w-4 h-4" />
+          )}
         </ControlButton>
       </Controls>
       <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
