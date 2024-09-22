@@ -2,23 +2,28 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import dynamic from 'next/dynamic';
 import { ReactFlowProvider } from "@xyflow/react";
 import FlowChart from "../../components/FlowChart";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 
+const MarkdownFlowChart = dynamic(() => import('../../components/MarkdownFlowChart'), {
+  ssr: false,
+});
+
 export default function ReadPage() {
   const [selectedContent, setSelectedContent] = useState<string>("");
   const params = useParams();
-  const id = params.id as string;
+  const id = params?.id as string;
 
   return (
     <div className="fixed inset-0 flex">
-      <div className="w-1/2 bg-gray-100 overflow-auto">
+      <div className="w-1/3 bg-gray-100 overflow-auto">
         <ReactFlowProvider>
           <FlowChart onNodeClick={setSelectedContent} documentId={id} />
         </ReactFlowProvider>
       </div>
-      <div className="w-1/2 bg-white relative">
+      <div className="w-1/3 bg-white relative">
         <div className="absolute inset-0 overflow-auto">
           {selectedContent ? (
             <div className="p-8">
@@ -32,6 +37,11 @@ export default function ReadPage() {
             </div>
           )}
         </div>
+      </div>
+      <div className="w-1/3 bg-gray-100 overflow-auto">
+        <ReactFlowProvider>
+          <MarkdownFlowChart content={selectedContent} />
+        </ReactFlowProvider>
       </div>
     </div>
   );
