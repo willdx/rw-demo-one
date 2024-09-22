@@ -1,87 +1,121 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
-import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo } from "react";
 import {
+  ReactFlow,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  BackgroundVariant,
+  Handle,
+  Position,
+  ControlButton,
+  useReactFlow,
   Node,
   Edge,
-  Background,
-  Controls,
-  ControlButton,
-  BackgroundVariant,
-  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import { visit } from "unist-util-visit";
-import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline"; // 更改为正确的图标
+import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import dagre from "dagre";
-import FlowChartSkeleton from "./TreeSkeleton";
 
-const ReactFlow = dynamic(
-  () => import("@xyflow/react").then((mod) => mod.ReactFlow),
-  {
-    ssr: false,
-    loading: () => <FlowChartSkeleton />,
-  }
+const NODE_WIDTH = 200;
+const NODE_HEIGHT = 40;
+
+interface MarkdownNode {
+  id: string;
+  content: string;
+  children: MarkdownNode[];
+}
+
+interface MarkdownTreeProps {
+  content: string;
+  onNodeClick: (content: string) => void;
+}
+
+const CustomNode: React.FC<{ data: { label: string; isSelected: boolean } }> = ({ data }) => (
+  <>
+    <div className={`px-3 py-2 bg-white border-2 rounded-md shadow-sm transition-all duration-200 ${
+      data.isSelected ? 'border-forest-accent bg-forest-accent/10' : 'border-forest-border'
+    }`}>
+      <span className="text-sm font-medium text-forest-text">{data.label}</span>
+    </div>
+    <Handle
+      type="target"
+      position={Position.Left}
+      className="w-3 h-3 -left-1.5 bg-forest-accent"
+    />
+    <Handle
+      type="source"
+      position={Position.Right}
+      className="w-3 h-3 -right-1.5 bg-forest-accent"
+    />
+  </>
 );
 
-interface MarkdownFlowChartProps {
-  content: string;
-}
+const parseMarkdown = (content: string): MarkdownNode[] => {
+  const lines = content.split('\n');
+  const root: MarkdownNode[] = [];
+  const stack: MarkdownNode[] = [];
 
-interface ASTNode {
-  type: string;
-  depth?: number;
-  children?: ASTNode[];
-  value?: string;
-}
+  lines.forEach((line, index) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine.startsWith('#')) {
+      const level = trimmedLine.split(' ')[0].length;
+      const newNode: MarkdownNode = { id: `node-${index}`, content: trimmedLine.substring(level + 1), children: [] };
+      
+      while (stack.length >= level) {
+        stack.pop();
+      }
+      
+      if (stack.length === 0) {
+        root.push(newNode);
+      } else {
+        stack[stack.length - 1].children.push(newNode);
+      }
+      stack.push(newNode);
+    }
+  });
 
-const NODE_WIDTH = 150;
-const NODE_HEIGHT = 50;
-
-const parseMarkdown = (markdown: string): ASTNode => {
-  const ast = unified().use(remarkParse).parse(markdown);
-  return ast as unknown as ASTNode;
+  return root;
 };
 
-const astToReactFlowData = (ast: ASTNode): { nodes: Node[]; edges: Edge[] } => {
+const formatMarkdownData = (
+  markdownNodes: MarkdownNode[]
+): { nodes: Node[]; edges: Edge[] } => {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
-  let id = 0;
-  const parentStack: { id: number; depth: number }[] = [];
+  let yOffset = 0;
 
-  visit(ast, "heading", (node: ASTNode) => {
-    const currentId = id++;
-    const depth = node.depth || 0;
-    const label =
-      (node.children && node.children[0] && node.children[0].value) || "";
-
+  const processNode = (node: MarkdownNode, depth: number = 0) => {
+    const nodeId = node.id;
     nodes.push({
-      id: currentId.toString(),
-      data: { label },
-      position: { x: 0, y: 0 }, // 初始位置设为 0,0，后面会用 dagre 重新布局
+      id: nodeId,
+      type: "customNode",
+      data: {
+        label: node.content,
+        isSelected: false,
+      },
+      position: { x: depth * (NODE_WIDTH + 50), y: yOffset },
     });
 
-    while (
-      parentStack.length > 0 &&
-      parentStack[parentStack.length - 1].depth >= depth
-    ) {
-      parentStack.pop();
-    }
+    yOffset += NODE_HEIGHT + 20;
 
-    if (parentStack.length > 0) {
-      const parentId = parentStack[parentStack.length - 1].id;
+    node.children.forEach((childNode) => {
+      const childId = childNode.id;
       edges.push({
-        id: `e${parentId}-${currentId}`,
-        source: parentId.toString(),
-        target: currentId.toString(),
+        id: `e${nodeId}-${childId}`,
+        source: nodeId,
+        target: childId,
+        type: "smoothstep",
+        style: { stroke: '#42b983', strokeWidth: 3 },
+        animated: true,
       });
-    }
+      processNode(childNode, depth + 1);
+    });
+  };
 
-    parentStack.push({ id: currentId, depth });
-  });
+  markdownNodes.forEach((node) => processNode(node));
 
   return { nodes, edges };
 };
@@ -89,8 +123,8 @@ const astToReactFlowData = (ast: ASTNode): { nodes: Node[]; edges: Edge[] } => {
 const getLayoutedElements = (
   nodes: Node[],
   edges: Edge[],
-  direction: "TB" | "LR" = "TB"
-) => {
+  direction: "TB" | "LR" = "LR"
+): { nodes: Node[]; edges: Edge[] } => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: direction });
@@ -120,60 +154,69 @@ const getLayoutedElements = (
   };
 };
 
-const MarkdownFlowChart: React.FC<MarkdownFlowChartProps> = ({ content }) => {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
+const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView } = useReactFlow();
-  const [isHorizontal, setIsHorizontal] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(true);
+
+  const formattedData = useMemo(() => {
+    const parsedNodes = parseMarkdown(content);
+    return formatMarkdownData(parsedNodes);
+  }, [content]);
 
   useEffect(() => {
-    const ast = parseMarkdown(content);
-    const { nodes: initialNodes, edges: initialEdges } =
-      astToReactFlowData(ast);
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      initialNodes,
-      initialEdges,
-      isHorizontal ? "LR" : "TB"
+    setNodes(formattedData.nodes);
+    setEdges(formattedData.edges);
+  }, [formattedData, setNodes, setEdges]);
+
+  useEffect(() => {
+    if (nodes.length > 0) {
+      fitView({ padding: 0.2, duration: 200 });
+    }
+  }, [nodes, fitView]);
+
+  const onToggleLayout = useCallback(() => {
+    setNodes((nds) => {
+      const direction = nds[0].position.x < nds[nds.length - 1].position.x ? "TB" : "LR";
+      const { nodes: layoutedNodes } = getLayoutedElements(nds, edges, direction);
+      return layoutedNodes;
+    });
+  }, [edges, setNodes]);
+
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    setNodes((nds) =>
+      nds.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          isSelected: n.id === node.id,
+        },
+      }))
     );
-    setNodes(layoutedNodes);
-    setEdges(layoutedEdges);
-    setShowSkeleton(false);
-
-    const timer = setTimeout(
-      () => fitView({ padding: 0.2, includeHiddenNodes: false }),
-      100
-    );
-    return () => clearTimeout(timer);
-  }, [content, isHorizontal, fitView]);
-
-  const toggleLayout = useCallback(() => setIsHorizontal((prev) => !prev), []);
-
-  if (showSkeleton) return <FlowChartSkeleton />;
+    onNodeClick(node.data.label);
+  }, [setNodes, onNodeClick]);
 
   return (
-    <div className="relative w-full h-full">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        fitView
-        fitViewOptions={{ padding: 0.2, includeHiddenNodes: false }}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Controls>
-          <ControlButton
-            onClick={toggleLayout}
-            title={isHorizontal ? "切换为垂直布局" : "切换为水平布局"}
-          >
-            <ArrowsRightLeftIcon
-              className={`w-4 h-4 transform ${isHorizontal ? "rotate-90" : ""}`}
-            />
-          </ControlButton>
-        </Controls>
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-      </ReactFlow>
-    </div>
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onNodeClick={handleNodeClick}
+      fitView
+      fitViewOptions={{ padding: 0.2 }}
+      proOptions={{ hideAttribution: true }}
+      className="w-full h-full bg-forest-bg"
+      nodeTypes={{ customNode: CustomNode }}
+    >
+      <Controls>
+        <ControlButton onClick={onToggleLayout} title="切换布局">
+          <ViewColumnsIcon className="w-4 h-4" />
+        </ControlButton>
+      </Controls>
+      <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e0e0e0" />
+    </ReactFlow>
   );
 };
 
-export default MarkdownFlowChart;
+export default MarkdownTree;

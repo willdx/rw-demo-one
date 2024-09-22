@@ -16,16 +16,12 @@ import {
   ControlButton,
   Handle,
   Position,
-  NodeChange,
-  EdgeChange,
-  OnNodesChange,
-  OnEdgesChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
-import FlowChartSkeleton from "./TreeSkeleton";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
+import TreeSkeleton from './TreeSkeleton';
 
 const GET_DOCUMENTS = gql`
   query Documents(
@@ -54,18 +50,6 @@ const GET_DOCUMENTS = gql`
                         id
                         fileName
                         content
-                        childrenConnection(sort: $sort) {
-                          edges {
-                            node {
-                              id
-                              fileName
-                              content
-                            }
-                            properties {
-                              order
-                            }
-                          }
-                        }
                       }
                       properties {
                         order
@@ -159,13 +143,17 @@ const formatGraphData = (
     const nodeId = node.id;
     nodes.push({
       id: nodeId,
-      type: "directoryNode",
+      type: "customNode",
       data: {
         label: node.fileName,
         content: node.content,
         depth: depth,
+        isSelected: false,
       },
       position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
+      style: {
+        width: NODE_WIDTH,
+      },
     });
 
     yOffset += NODE_HEIGHT + VERTICAL_GAP;
@@ -179,6 +167,8 @@ const formatGraphData = (
           source: nodeId,
           target: childId,
           type: "smoothstep",
+          style: { stroke: '#42b983', strokeWidth: 3 },
+          animated: true,
         });
         processNode(childNode, depth + 1);
       });
@@ -190,25 +180,27 @@ const formatGraphData = (
   return { nodes, edges };
 };
 
-// 自定义目录节点组件
-const DirectoryNode: React.FC<{ data: { label: string; depth: number } }> = ({
+// 更新自定义节点组件
+const CustomNode: React.FC<{ data: { label: string; depth: number; isSelected: boolean } }> = ({
   data,
 }) => (
-  <div className="px-3 py-2 rounded-md shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 w-full h-full">
-    <div className="flex items-center h-full">
-      <span className="text-xs font-medium truncate">{data.label}</span>
+  <>
+    <div className={`px-3 py-2 bg-white border-2 rounded-md shadow-sm transition-all duration-200 ${
+      data.isSelected ? 'border-forest-accent bg-forest-accent/10' : 'border-forest-border'
+    }`}>
+      <span className="text-sm font-medium text-forest-text">{data.label}</span>
     </div>
     <Handle
       type="target"
       position={Position.Left}
-      className="w-2 h-2 -left-1"
+      className="w-3 h-3 -left-1.5 bg-forest-accent"
     />
     <Handle
       type="source"
       position={Position.Right}
-      className="w-2 h-2 -right-1"
+      className="w-3 h-3 -right-1.5 bg-forest-accent"
     />
-  </div>
+  </>
 );
 
 const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
@@ -219,13 +211,10 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
     },
   });
 
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
-    "auto"
-  );
-
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [showSkeleton, setShowSkeleton] = useState<boolean>(false);
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
   const { fitView } = useReactFlow();
 
   const formattedData = useMemo(() => {
@@ -257,55 +246,57 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: {
+            ...n.data,
+            isSelected: n.id === node.id,
+          },
+        }))
+      );
       onNodeClick((node.data.content as string) || "");
     },
-    [onNodeClick]
+    [setNodes, onNodeClick]
   );
 
   const onToggleLayout = useCallback(() => {
-    const newLayout =
-      layout === "auto"
-        ? "horizontal"
-        : layout === "horizontal"
-        ? "vertical"
-        : "auto";
-    setLayout(newLayout);
+    setLayout((prevLayout) => {
+      const newLayout = prevLayout === "auto" ? "horizontal" : prevLayout === "horizontal" ? "vertical" : "auto";
+      
+      let layoutedElements;
+      if (newLayout === "auto") {
+        layoutedElements = formattedData;
+      } else {
+        const direction = newLayout === "horizontal" ? "LR" : "TB";
+        layoutedElements = getLayoutedElements(nodes, edges, direction);
+      }
 
-    let layoutedElements;
-    if (newLayout === "auto") {
-      layoutedElements = formatGraphData(data.documents[0]);
-    } else {
-      const direction = newLayout === "horizontal" ? "LR" : "TB";
-      layoutedElements = getLayoutedElements(nodes, edges, direction);
-    }
+      setNodes(layoutedElements.nodes);
+      setEdges(layoutedElements.edges);
+      window.requestAnimationFrame(() => fitView({ padding: 0.2 }));
 
-    setNodes(layoutedElements.nodes);
-    setEdges(layoutedElements.edges);
-    window.requestAnimationFrame(() => fitView({ padding: 0.2 }));
-  }, [layout, data, nodes, edges, setNodes, setEdges, fitView]);
+      return newLayout;
+    });
+  }, [nodes, edges, formattedData, setNodes, setEdges, fitView]);
 
   // 在数据加载完成后应用布局
   useEffect(() => {
     if (!loading && data?.documents?.[0]) {
       let layoutedElements;
       if (layout === "auto") {
-        layoutedElements = formatGraphData(data.documents[0]);
+        layoutedElements = formattedData;
       } else {
         const direction = layout === "horizontal" ? "LR" : "TB";
-        const initialLayout = formatGraphData(data.documents[0]);
-        layoutedElements = getLayoutedElements(
-          initialLayout.nodes,
-          initialLayout.edges,
-          direction
-        );
+        layoutedElements = getLayoutedElements(formattedData.nodes, formattedData.edges, direction);
       }
       setNodes(layoutedElements.nodes);
       setEdges(layoutedElements.edges);
       window.requestAnimationFrame(() => fitView({ padding: 0.2 }));
     }
-  }, [loading, data, layout, setNodes, setEdges, fitView]);
+  }, [loading, data, layout, formattedData, setNodes, setEdges, fitView]);
 
-  if (showSkeleton) return <FlowChartSkeleton />;
+  if (showSkeleton) return <TreeSkeleton />;
   if (error) return <p>错误：{error.message}</p>;
 
   return (
@@ -317,9 +308,11 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
       onConnect={onConnect}
       onNodeClick={handleNodeClick}
       fitView
+      fitViewOptions={{ padding: 0.2 }}
       proOptions={{ hideAttribution: true }}
       className="w-full h-full"
-      nodeTypes={{ directoryNode: DirectoryNode }}
+      nodeTypes={{ customNode: CustomNode }}
+      edgeTypes={{}}
     >
       <Controls>
         <ControlButton
@@ -339,7 +332,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
           />
         </ControlButton>
       </Controls>
-      <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+      <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e0e0e0" />
     </ReactFlow>
   );
 };

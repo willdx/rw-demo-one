@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { oneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import "katex/dist/katex.min.css";
 
 interface MarkdownRendererProps {
@@ -13,27 +13,37 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   return (
-    <div className="prose prose-lg dark:prose-invert max-w-none">
+    <div className="prose prose-forest dark:prose-invert max-w-none bg-forest-content p-8 rounded-lg shadow-sm">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          code({ className, children, ...props }) {
+          code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || "");
-            return match ? (
+            return !inline && match ? (
               <SyntaxHighlighter
-                style={vscDarkPlus}
+                style={oneLight}
                 language={match[1]}
                 PreTag="div"
+                className="rounded-md"
                 {...props}
               >
                 {String(children).replace(/\n$/, "")}
               </SyntaxHighlighter>
             ) : (
-              <code className={className} {...props}>
+              <code className={`${className} bg-forest-code-bg text-forest-code rounded px-1`} {...props}>
                 {children}
               </code>
             );
+          },
+          table({ node, ...props }) {
+            return <table className="border-collapse w-full" {...props} />;
+          },
+          th({ node, ...props }) {
+            return <th className="border border-forest-border p-2 bg-forest-bg font-semibold" {...props} />;
+          },
+          td({ node, ...props }) {
+            return <td className="border border-forest-border p-2" {...props} />;
           },
         }}
       >
