@@ -211,8 +211,8 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
     },
   });
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const [showSkeleton, setShowSkeleton] = useState<boolean>(false);
   const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
   const { fitView } = useReactFlow();
@@ -223,6 +223,8 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
     }
     return { nodes: [], edges: [] };
   }, [data]);
+
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -251,13 +253,20 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
           ...n,
           data: {
             ...n.data,
-            isSelected: n.id === node.id,
+            isSelected: n.id === node.id && n.id !== selectedNodeId,
           },
         }))
       );
-      onNodeClick((node.data.content as string) || "");
+      
+      if (node.id === selectedNodeId) {
+        setSelectedNodeId(null);
+        onNodeClick(""); // 清空选中内容
+      } else {
+        setSelectedNodeId(node.id);
+        onNodeClick((node.data.content as string) || "");
+      }
     },
-    [setNodes, onNodeClick]
+    [setNodes, onNodeClick, selectedNodeId]
   );
 
   const onToggleLayout = useCallback(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Controls,
@@ -25,6 +25,7 @@ const NODE_HEIGHT = 40;
 interface MarkdownNode {
   id: string;
   content: string;
+  fullContent: string; // 新增：存储完整的内容
   children: MarkdownNode[];
 }
 
@@ -62,7 +63,12 @@ const parseMarkdown = (content: string): MarkdownNode[] => {
     const trimmedLine = line.trim();
     if (trimmedLine.startsWith('#')) {
       const level = trimmedLine.split(' ')[0].length;
-      const newNode: MarkdownNode = { id: `node-${index}`, content: trimmedLine.substring(level + 1), children: [] };
+      const newNode: MarkdownNode = { 
+        id: `node-${index}`, 
+        content: trimmedLine.substring(level).trim(),
+        fullContent: trimmedLine + '\n', // 初始化为当前行
+        children: [] 
+      };
       
       while (stack.length >= level) {
         stack.pop();
@@ -74,8 +80,17 @@ const parseMarkdown = (content: string): MarkdownNode[] => {
         stack[stack.length - 1].children.push(newNode);
       }
       stack.push(newNode);
+    } else if (stack.length > 0) {
+      // 将非标题行添加到当前节点的 fullContent
+      stack[stack.length - 1].fullContent += line + '\n';
     }
   });
+
+  // 处理完所有行后，为每个节点设置完整内容
+  const setFullContent = (node: MarkdownNode) => {
+    node.children.forEach(setFullContent);
+  };
+  root.forEach(setFullContent);
 
   return root;
 };
@@ -94,6 +109,7 @@ const formatMarkdownData = (
       type: "customNode",
       data: {
         label: node.content,
+        content: node.fullContent, // 使用完整内容
         isSelected: false,
       },
       position: { x: depth * (NODE_WIDTH + 50), y: yOffset },
@@ -155,9 +171,10 @@ const getLayoutedElements = (
 };
 
 const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView } = useReactFlow();
+  const [layout, setLayout] = useState<"LR" | "TB">("LR");
 
   const formattedData = useMemo(() => {
     const parsedNodes = parseMarkdown(content);
@@ -165,23 +182,16 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => 
   }, [content]);
 
   useEffect(() => {
-    setNodes(formattedData.nodes);
-    setEdges(formattedData.edges);
-  }, [formattedData, setNodes, setEdges]);
+    const layoutedElements = getLayoutedElements(formattedData.nodes, formattedData.edges, layout);
+    setNodes(layoutedElements.nodes);
+    setEdges(layoutedElements.edges);
+  }, [formattedData, layout, setNodes, setEdges]);
 
   useEffect(() => {
     if (nodes.length > 0) {
       fitView({ padding: 0.2, duration: 200 });
     }
   }, [nodes, fitView]);
-
-  const onToggleLayout = useCallback(() => {
-    setNodes((nds) => {
-      const direction = nds[0].position.x < nds[nds.length - 1].position.x ? "TB" : "LR";
-      const { nodes: layoutedNodes } = getLayoutedElements(nds, edges, direction);
-      return layoutedNodes;
-    });
-  }, [edges, setNodes]);
 
   const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setNodes((nds) =>
@@ -193,8 +203,12 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => 
         },
       }))
     );
-    onNodeClick(node.data.label);
+    onNodeClick(node.data.content as string);
   }, [setNodes, onNodeClick]);
+
+  const onToggleLayout = useCallback(() => {
+    setLayout((prevLayout) => (prevLayout === "LR" ? "TB" : "LR"));
+  }, []);
 
   return (
     <ReactFlow
@@ -211,7 +225,7 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => 
     >
       <Controls>
         <ControlButton onClick={onToggleLayout} title="切换布局">
-          <ViewColumnsIcon className="w-4 h-4" />
+          <ViewColumnsIcon className={`w-4 h-4 ${layout === "TB" ? "transform rotate-90" : ""}`} />
         </ControlButton>
       </Controls>
       <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e0e0e0" />

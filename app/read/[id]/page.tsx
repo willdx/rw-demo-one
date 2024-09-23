@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
 import FlowChart from "../../components/NodeTree";
@@ -23,9 +23,9 @@ const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const [selectedContent, setSelectedContent] = useState<string>("");
+  const [markdownTreeContent, setMarkdownTreeContent] = useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
-  const [markdownContent, setMarkdownContent] = useState<string>("");
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 
@@ -37,13 +37,16 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
 
   const handleNodeClick = useCallback((content: string) => {
     setSelectedContent(content);
+    setMarkdownTreeContent(content); // 更新Markdown树的内容，但不切换标签
   }, []);
 
-  useEffect(() => {
-    if (activeTab === "markdown" && selectedContent && !markdownContent) {
-      setMarkdownContent(selectedContent);
-    }
-  }, [activeTab, selectedContent, markdownContent]);
+  const handleMarkdownNodeClick = useCallback((content: string) => {
+    setSelectedContent(content); // 只更新选中的内容，不更新 Markdown 树
+  }, []);
+
+  const handleTabClick = useCallback((tab: "node" | "markdown") => {
+    setActiveTab(tab);
+  }, []);
 
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
@@ -60,7 +63,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
                   ? "text-forest-accent border-b-2 border-forest-accent"
                   : "text-forest-text hover:text-forest-accent"
               }`}
-              onClick={() => setActiveTab("node")}
+              onClick={() => handleTabClick("node")}
             >
               <DocumentChartBarIcon className="w-5 h-5 mr-2 inline-block" />
               节点树
@@ -71,7 +74,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
                   ? "text-forest-accent border-b-2 border-forest-accent"
                   : "text-forest-text hover:text-forest-accent"
               }`}
-              onClick={() => setActiveTab("markdown")}
+              onClick={() => handleTabClick("markdown")}
             >
               <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
               Markdown树
@@ -86,11 +89,11 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
                 />
               </ReactFlowProvider>
             )}
-            {activeTab === "markdown" && markdownContent && (
+            {activeTab === "markdown" && markdownTreeContent && (
               <ReactFlowProvider>
                 <MarkdownTree
-                  content={markdownContent}
-                  onNodeClick={handleNodeClick}
+                  content={markdownTreeContent}
+                  onNodeClick={handleMarkdownNodeClick}
                 />
               </ReactFlowProvider>
             )}
