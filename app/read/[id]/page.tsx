@@ -9,7 +9,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DocumentTextIcon,
-  DocumentChartBarIcon,
+  BookOpenIcon,
 } from "@heroicons/react/24/outline";
 
 const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
@@ -75,7 +75,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
             leftCollapsed ? "invisible" : "visible"
           }`}
         >
-          <div className="flex border-b border-forest-border">
+          <div className="flex border-b border-forest-border h-14">
             <button
               className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
                 activeTab === "node"
@@ -84,8 +84,8 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
               }`}
               onClick={() => handleTabClick("node")}
             >
-              <DocumentChartBarIcon className="w-5 h-5 mr-2 inline-block" />
-              节点树
+              <BookOpenIcon className="w-5 h-5 mr-2 inline-block" />
+              Book
             </button>
             <button
               className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
@@ -96,7 +96,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
               onClick={() => handleTabClick("markdown")}
             >
               <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
-              内容树
+              Article
             </button>
           </div>
           <div className="flex-grow overflow-hidden p-2">
@@ -136,7 +136,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
 
       <button
         onClick={togglePanel}
-        className="absolute left-0 top-1/2 -translate-y-1/2 p-2 bg-forest-sidebar hover:bg-forest-border rounded-r-md transition-colors duration-200"
+        className="absolute left-0 top-0 mt-2 ml-2 p-2 bg-forest-sidebar hover:bg-forest-border rounded-md transition-colors duration-200"
       >
         {leftCollapsed ? (
           <ChevronRightIcon className="w-5 h-5 text-forest-text" />
