@@ -237,6 +237,36 @@ const FlowChart: React.FC<FlowChartProps> = ({
     return { nodes: [], edges: [] };
   }, [data]);
 
+  const updateEdgeStylesOnNodeClick = (selectedNodeId: string, nodes: Node[], edges: Edge[]) => {
+    const selectedNode = nodes.find(node => node.id === selectedNodeId);
+    if (!selectedNode) return edges;
+
+    const selectedNodeIds = new Set<string>();
+    const traverse = (nodeId: string) => {
+      selectedNodeIds.add(nodeId);
+      edges
+        .filter(edge => edge.source === nodeId)
+        .forEach(edge => traverse(edge.target));
+    };
+
+    // Traverse from root to selected node
+    const traverseToRoot = (nodeId: string) => {
+      selectedNodeIds.add(nodeId);
+      edges
+        .filter(edge => edge.target === nodeId)
+        .forEach(edge => traverseToRoot(edge.source));
+    };
+
+    traverseToRoot(selectedNodeId);
+    traverse(selectedNodeId);
+
+    return edges.map(edge => ({
+      ...edge,
+      style: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target) ? { stroke: '#42b983', strokeWidth: 3 } : { stroke: '#888', strokeWidth: 2 },
+      animated: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
+    }));
+  };
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (loading) {
@@ -250,8 +280,13 @@ const FlowChart: React.FC<FlowChartProps> = ({
           isSelected: node.data.content === selectedContent || (index === 0 && !selectedContent)
         }
       }));
+      const updatedEdges = updateEdgeStylesOnNodeClick(
+        updatedNodes.find(node => node.data.isSelected)?.id || updatedNodes[0].id,
+        updatedNodes,
+        formattedData.edges
+      );
       setNodes(updatedNodes);
-      setEdges(formattedData.edges);
+      setEdges(updatedEdges);
 
       // 如果没有选中的内容，默认选中根节点
       if (!selectedContent && updatedNodes.length > 0) {
@@ -269,8 +304,10 @@ const FlowChart: React.FC<FlowChartProps> = ({
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       onNodeClick(node.data.content);
+      const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
+      setEdges(updatedEdges);
     },
-    [onNodeClick]
+    [onNodeClick, nodes, edges, setEdges]
   );
 
   const onToggleLayout = useCallback(() => {
@@ -293,8 +330,14 @@ const FlowChart: React.FC<FlowChartProps> = ({
         }
       }));
 
+      const updatedEdges = updateEdgeStylesOnNodeClick(
+        updatedNodes.find(node => node.data.isSelected)?.id || updatedNodes[0].id,
+        updatedNodes,
+        layoutedElements.edges
+      );
+
       setNodes(updatedNodes);
-      setEdges(layoutedElements.edges);
+      setEdges(updatedEdges);
       window.requestAnimationFrame(() => fitView({ padding: 0.2 }));
 
       return newLayout;
