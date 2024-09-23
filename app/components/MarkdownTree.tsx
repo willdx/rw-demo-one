@@ -21,6 +21,8 @@ import dagre from "dagre";
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 40;
+const HORIZONTAL_GAP = 50;
+const VERTICAL_GAP = 20;
 
 interface MarkdownNode {
   id: string;
@@ -42,17 +44,19 @@ const CustomNode: React.FC<{
     <div
       className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
         data.depth === 0
-          ? 'bg-forest-accent border-2 border-forest-accent'
+          ? "bg-forest-accent border-2 border-forest-accent"
           : data.isSelected
-          ? 'border-forest-accent bg-forest-accent/10'
-          : 'border-forest-border bg-white'
+          ? "border-forest-accent bg-forest-accent/10"
+          : "border-forest-border bg-white"
       }`}
     >
-      <span className={`text-sm font-medium ${
-        data.depth === 0
-          ? 'text-white font-bold'
-          : 'text-forest-text'
-      }`}>{data.label}</span>
+      <span
+        className={`text-sm font-medium ${
+          data.depth === 0 ? "text-white font-bold" : "text-forest-text"
+        }`}
+      >
+        {data.label}
+      </span>
     </div>
     <Handle
       type="target"
@@ -124,10 +128,10 @@ const formatMarkdownData = (
         isSelected: false,
         depth, // 添加 depth 属性
       },
-      position: { x: depth * (NODE_WIDTH + 50), y: yOffset },
+      position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
     });
 
-    yOffset += NODE_HEIGHT + 20;
+    yOffset += NODE_HEIGHT + VERTICAL_GAP;
 
     node.children.forEach((childNode) => {
       const childId = childNode.id;
@@ -187,61 +191,79 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
   onNodeClick,
   selectedContent,
 }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView } = useReactFlow();
-  const [layout, setLayout] = useState<"LR" | "TB">("LR");
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
+    "auto"
+  );
 
   const formattedData = useMemo(() => {
     const parsedNodes = parseMarkdown(content);
     return formatMarkdownData(parsedNodes);
   }, [content]);
 
-  const updateEdgeStylesOnNodeClick = (selectedNodeId: string, nodes: Node[], edges: Edge[]) => {
-    const selectedNode = nodes.find(node => node.id === selectedNodeId);
+  const updateEdgeStylesOnNodeClick = (
+    selectedNodeId: string,
+    nodes: Node[],
+    edges: Edge[]
+  ) => {
+    const selectedNode = nodes.find((node) => node.id === selectedNodeId);
     if (!selectedNode) return edges;
 
     const selectedNodeIds = new Set<string>();
     const traverse = (nodeId: string) => {
       selectedNodeIds.add(nodeId);
       edges
-        .filter(edge => edge.source === nodeId)
-        .forEach(edge => traverse(edge.target));
+        .filter((edge) => edge.source === nodeId)
+        .forEach((edge) => traverse(edge.target));
     };
 
     // Traverse from root to selected node
     const traverseToRoot = (nodeId: string) => {
       selectedNodeIds.add(nodeId);
       edges
-        .filter(edge => edge.target === nodeId)
-        .forEach(edge => traverseToRoot(edge.source));
+        .filter((edge) => edge.target === nodeId)
+        .forEach((edge) => traverseToRoot(edge.source));
     };
 
     traverseToRoot(selectedNodeId);
     traverse(selectedNodeId);
 
-    return edges.map(edge => ({
+    return edges.map((edge) => ({
       ...edge,
-      style: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target) ? { stroke: '#42b983', strokeWidth: 3 } : { stroke: '#888', strokeWidth: 2 },
-      animated: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
+      style:
+        selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+          ? { stroke: "#42b983", strokeWidth: 3 }
+          : { stroke: "#888", strokeWidth: 2 },
+      animated:
+        selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
     }));
   };
 
   useEffect(() => {
-    const layoutedElements = getLayoutedElements(
-      formattedData.nodes,
-      formattedData.edges,
-      layout
-    );
-    const updatedNodes = layoutedElements.nodes.map(node => ({
+    let layoutedElements;
+    if (layout === "auto") {
+      layoutedElements = formattedData;
+    } else {
+      const direction = layout === "horizontal" ? "LR" : "TB";
+      layoutedElements = getLayoutedElements(
+        formattedData.nodes,
+        formattedData.edges,
+        direction
+      );
+    }
+
+    const updatedNodes = layoutedElements.nodes.map((node) => ({
       ...node,
       data: {
         ...node.data,
-        isSelected: node.data.content === selectedContent
-      }
+        isSelected: node.data.content === selectedContent,
+      },
     }));
     const updatedEdges = updateEdgeStylesOnNodeClick(
-      updatedNodes.find(node => node.data.isSelected)?.id || updatedNodes[0].id,
+      updatedNodes.find((node) => node.data.isSelected)?.id ||
+        updatedNodes[0].id,
       updatedNodes,
       layoutedElements.edges
     );
@@ -260,8 +282,54 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
   );
 
   const onToggleLayout = useCallback(() => {
-    setLayout((prevLayout) => (prevLayout === "LR" ? "TB" : "LR"));
-  }, []);
+    setLayout((prevLayout) => {
+      const newLayout =
+        prevLayout === "auto"
+          ? "horizontal"
+          : prevLayout === "horizontal"
+          ? "vertical"
+          : "auto";
+
+      let layoutedElements;
+      if (newLayout === "auto") {
+        layoutedElements = formattedData;
+      } else {
+        const direction = newLayout === "horizontal" ? "LR" : "TB";
+        layoutedElements = getLayoutedElements(nodes, edges, direction);
+      }
+
+      const updatedNodes = layoutedElements.nodes.map((node, index) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isSelected:
+            node.data.content === selectedContent ||
+            (index === 0 && !selectedContent),
+        },
+      }));
+
+      const updatedEdges = updateEdgeStylesOnNodeClick(
+        updatedNodes.find((node) => node.data.isSelected)?.id ||
+          updatedNodes[0].id,
+        updatedNodes,
+        layoutedElements.edges
+      );
+
+      setNodes(updatedNodes);
+      setEdges(updatedEdges);
+      window.requestAnimationFrame(() => fitView({ padding: 0.2 }));
+
+      return newLayout;
+    });
+  }, [
+    nodes,
+    edges,
+    formattedData,
+    setNodes,
+    setEdges,
+    fitView,
+    selectedContent,
+  ]);
 
   return (
     <ReactFlow
@@ -280,7 +348,7 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
         <ControlButton onClick={onToggleLayout} title="切换布局">
           <ViewColumnsIcon
             className={`w-4 h-4 ${
-              layout === "TB" ? "transform rotate-90" : ""
+              layout === "vertical" ? "transform rotate-90" : ""
             }`}
           />
         </ControlButton>

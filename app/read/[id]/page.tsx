@@ -127,7 +127,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-forest-text opacity-50 italic text-center">
-                请点击左侧思维导图的节点以查看内容
+                请点击左侧思维导图的节点以查看每个节点的内容
               </p>
             </div>
           )}
