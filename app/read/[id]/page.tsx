@@ -123,9 +123,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
       <div className="flex-1 flex flex-col overflow-hidden bg-forest-content">
         <div className="flex-grow overflow-auto px-8 py-6">
           {displayContent ? (
-            <div className="max-w-3xl mx-auto">
-              <MarkdownRenderer content={displayContent} />
-            </div>
+            <MarkdownRenderer content={displayContent} />
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-forest-text opacity-50 italic text-center">
