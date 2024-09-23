@@ -13,8 +13,8 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   return (
-    <div className="flex items-center justify-center min-h-screen p-4"> {/* 外层容器用于居中显示 */}
-      <div className="prose prose-forest dark:prose-invert max-w-3xl bg-forest-content p-8 rounded-lg shadow-sm border border-forest-border w-full overflow-hidden"> {/* 内层容器用于控制宽度和样式 */}
+    <div className="h-full p-4 overflow-auto"> {/* 外层容器用于控制高度和滚动 */}
+      <div className="prose prose-forest dark:prose-invert max-w-3xl bg-forest-content p-8 rounded-lg shadow-sm border border-forest-border mx-auto"> {/* 内层容器用于控制宽度和样式 */}
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex]}
