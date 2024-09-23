@@ -212,6 +212,27 @@ const CustomNode: React.FC<{ data: { label: string; depth: number; isSelected: b
   </>
 );
 
+const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
+  const visited = new Set<string>();
+  const result: string[] = [];
+
+  const dfs = (nodeId: string) => {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+    result.push(nodeId);
+
+    edges
+      .filter(edge => edge.source === nodeId)
+      .forEach(edge => dfs(edge.target));
+  };
+
+  if (nodes.length > 0) {
+    dfs(nodes[0].id);
+  }
+
+  return result;
+};
+
 const FlowChart: React.FC<FlowChartProps> = ({
   onNodeClick,
   documentId,
@@ -266,6 +287,40 @@ const FlowChart: React.FC<FlowChartProps> = ({
       animated: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
     }));
   };
+
+  const [dfsOrder, setDfsOrder] = useState<string[]>([]);
+  const [currentDfsIndex, setCurrentDfsIndex] = useState<number>(0);
+
+  useEffect(() => {
+    if (nodes.length > 0 && edges.length > 0) {
+      const order = dfsTraversal(nodes, edges);
+      setDfsOrder(order);
+      setCurrentDfsIndex(order.findIndex(id => nodes.find(node => node.id === id)?.data.content === selectedContent));
+    }
+  }, [nodes, edges, selectedContent]);
+
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === "ArrowLeft") {
+      setCurrentDfsIndex(prevIndex => {
+        const newIndex = Math.max(prevIndex - 1, 0);
+        onNodeClick(nodes.find(node => node.id === dfsOrder[newIndex])?.data.content || "");
+        return newIndex;
+      });
+    } else if (event.key === "ArrowRight") {
+      setCurrentDfsIndex(prevIndex => {
+        const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
+        onNodeClick(nodes.find(node => node.id === dfsOrder[newIndex])?.data.content || "");
+        return newIndex;
+      });
+    }
+  }, [dfsOrder, nodes, onNodeClick]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
