@@ -94,6 +94,7 @@ interface DocumentNode {
 interface FlowChartProps {
   onNodeClick: (content: string) => void;
   documentId: string;
+  selectedContent: string;
 }
 
 const getLayoutedElements = (
@@ -203,7 +204,11 @@ const CustomNode: React.FC<{ data: { label: string; depth: number; isSelected: b
   </>
 );
 
-const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
+const FlowChart: React.FC<FlowChartProps> = ({
+  onNodeClick,
+  documentId,
+  selectedContent,
+}) => {
   const { loading, error, data } = useQuery(GET_DOCUMENTS, {
     variables: {
       where: { id: documentId },
@@ -224,22 +229,29 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
     return { nodes: [], edges: [] };
   }, [data]);
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (loading) {
       timer = setTimeout(() => setShowSkeleton(true), 300);
     } else {
       setShowSkeleton(false);
-      setNodes(formattedData.nodes);
+      const updatedNodes = formattedData.nodes.map((node, index) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isSelected: node.data.content === selectedContent || (index === 0 && !selectedContent)
+        }
+      }));
+      setNodes(updatedNodes);
       setEdges(formattedData.edges);
-      if (formattedData.nodes.length > 0) {
-        onNodeClick(formattedData.nodes[0].data.content || "");
+
+      // 如果没有选中的内容，默认选中根节点
+      if (!selectedContent && updatedNodes.length > 0) {
+        onNodeClick(updatedNodes[0].data.content);
       }
     }
     return () => clearTimeout(timer);
-  }, [loading, formattedData, setNodes, setEdges, onNodeClick]);
+  }, [loading, formattedData, setNodes, setEdges, selectedContent, onNodeClick]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -248,25 +260,9 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      setNodes((nds) =>
-        nds.map((n) => ({
-          ...n,
-          data: {
-            ...n.data,
-            isSelected: n.id === node.id && n.id !== selectedNodeId,
-          },
-        }))
-      );
-      
-      if (node.id === selectedNodeId) {
-        setSelectedNodeId(null);
-        onNodeClick(""); // 清空选中内容
-      } else {
-        setSelectedNodeId(node.id);
-        onNodeClick((node.data.content as string) || "");
-      }
+      onNodeClick(node.data.content);
     },
-    [setNodes, onNodeClick, selectedNodeId]
+    [onNodeClick]
   );
 
   const onToggleLayout = useCallback(() => {
@@ -281,29 +277,21 @@ const FlowChart: React.FC<FlowChartProps> = ({ onNodeClick, documentId }) => {
         layoutedElements = getLayoutedElements(nodes, edges, direction);
       }
 
-      setNodes(layoutedElements.nodes);
+      const updatedNodes = layoutedElements.nodes.map((node, index) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isSelected: node.data.content === selectedContent || (index === 0 && !selectedContent)
+        }
+      }));
+
+      setNodes(updatedNodes);
       setEdges(layoutedElements.edges);
       window.requestAnimationFrame(() => fitView({ padding: 0.2 }));
 
       return newLayout;
     });
-  }, [nodes, edges, formattedData, setNodes, setEdges, fitView]);
-
-  // 在数据加载完成后应用布局
-  useEffect(() => {
-    if (!loading && data?.documents?.[0]) {
-      let layoutedElements;
-      if (layout === "auto") {
-        layoutedElements = formattedData;
-      } else {
-        const direction = layout === "horizontal" ? "LR" : "TB";
-        layoutedElements = getLayoutedElements(formattedData.nodes, formattedData.edges, direction);
-      }
-      setNodes(layoutedElements.nodes);
-      setEdges(layoutedElements.edges);
-      window.requestAnimationFrame(() => fitView({ padding: 0.2 }));
-    }
-  }, [loading, data, layout, formattedData, setNodes, setEdges, fitView]);
+  }, [nodes, edges, formattedData, setNodes, setEdges, fitView, selectedContent]);
 
   if (showSkeleton) return <TreeSkeleton />;
   if (error) return <p>错误：{error.message}</p>;

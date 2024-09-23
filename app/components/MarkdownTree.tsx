@@ -25,20 +25,27 @@ const NODE_HEIGHT = 40;
 interface MarkdownNode {
   id: string;
   content: string;
-  fullContent: string; // 新增：存储完整的内容
+  fullContent: string;
   children: MarkdownNode[];
 }
 
 interface MarkdownTreeProps {
   content: string;
   onNodeClick: (content: string) => void;
+  selectedContent: string;
 }
 
-const CustomNode: React.FC<{ data: { label: string; isSelected: boolean } }> = ({ data }) => (
+const CustomNode: React.FC<{
+  data: { label: string; isSelected: boolean };
+}> = ({ data }) => (
   <>
-    <div className={`px-3 py-2 bg-white border-2 rounded-md shadow-sm transition-all duration-200 ${
-      data.isSelected ? 'border-forest-accent bg-forest-accent/10' : 'border-forest-border'
-    }`}>
+    <div
+      className={`px-3 py-2 bg-white border-2 rounded-md shadow-sm transition-all duration-200 ${
+        data.isSelected
+          ? "border-forest-accent bg-forest-accent/10"
+          : "border-forest-border"
+      }`}
+    >
       <span className="text-sm font-medium text-forest-text">{data.label}</span>
     </div>
     <Handle
@@ -55,25 +62,25 @@ const CustomNode: React.FC<{ data: { label: string; isSelected: boolean } }> = (
 );
 
 const parseMarkdown = (content: string): MarkdownNode[] => {
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   const root: MarkdownNode[] = [];
   const stack: MarkdownNode[] = [];
 
   lines.forEach((line, index) => {
     const trimmedLine = line.trim();
-    if (trimmedLine.startsWith('#')) {
-      const level = trimmedLine.split(' ')[0].length;
-      const newNode: MarkdownNode = { 
-        id: `node-${index}`, 
+    if (trimmedLine.startsWith("#")) {
+      const level = trimmedLine.split(" ")[0].length;
+      const newNode: MarkdownNode = {
+        id: `node-${index}`,
         content: trimmedLine.substring(level).trim(),
-        fullContent: trimmedLine + '\n', // 初始化为当前行
-        children: [] 
+        fullContent: trimmedLine + "\n",
+        children: [],
       };
-      
+
       while (stack.length >= level) {
         stack.pop();
       }
-      
+
       if (stack.length === 0) {
         root.push(newNode);
       } else {
@@ -81,12 +88,10 @@ const parseMarkdown = (content: string): MarkdownNode[] => {
       }
       stack.push(newNode);
     } else if (stack.length > 0) {
-      // 将非标题行添加到当前节点的 fullContent
-      stack[stack.length - 1].fullContent += line + '\n';
+      stack[stack.length - 1].fullContent += line + "\n";
     }
   });
 
-  // 处理完所有行后，为每个节点设置完整内容
   const setFullContent = (node: MarkdownNode) => {
     node.children.forEach(setFullContent);
   };
@@ -109,7 +114,7 @@ const formatMarkdownData = (
       type: "customNode",
       data: {
         label: node.content,
-        content: node.fullContent, // 使用完整内容
+        content: node.fullContent,
         isSelected: false,
       },
       position: { x: depth * (NODE_WIDTH + 50), y: yOffset },
@@ -124,7 +129,7 @@ const formatMarkdownData = (
         source: nodeId,
         target: childId,
         type: "smoothstep",
-        style: { stroke: '#42b983', strokeWidth: 3 },
+        style: { stroke: "#42b983", strokeWidth: 3 },
         animated: true,
       });
       processNode(childNode, depth + 1);
@@ -170,9 +175,13 @@ const getLayoutedElements = (
   };
 };
 
-const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
+const MarkdownTree: React.FC<MarkdownTreeProps> = ({
+  content,
+  onNodeClick,
+  selectedContent,
+}) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView } = useReactFlow();
   const [layout, setLayout] = useState<"LR" | "TB">("LR");
 
@@ -182,29 +191,29 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => 
   }, [content]);
 
   useEffect(() => {
-    const layoutedElements = getLayoutedElements(formattedData.nodes, formattedData.edges, layout);
-    setNodes(layoutedElements.nodes);
-    setEdges(layoutedElements.edges);
-  }, [formattedData, layout, setNodes, setEdges]);
-
-  useEffect(() => {
-    if (nodes.length > 0) {
-      fitView({ padding: 0.2, duration: 200 });
-    }
-  }, [nodes, fitView]);
-
-  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        data: {
-          ...n.data,
-          isSelected: n.id === node.id,
-        },
-      }))
+    const layoutedElements = getLayoutedElements(
+      formattedData.nodes,
+      formattedData.edges,
+      layout
     );
-    onNodeClick(node.data.content as string);
-  }, [setNodes, onNodeClick]);
+    const updatedNodes = layoutedElements.nodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        isSelected: node.data.content === selectedContent
+      }
+    }));
+    setNodes(updatedNodes);
+    setEdges(layoutedElements.edges);
+    fitView({ padding: 0.2, duration: 200 });
+  }, [formattedData, layout, setNodes, setEdges, selectedContent, fitView]);
+
+  const handleNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      onNodeClick(node.data.content as string);
+    },
+    [onNodeClick]
+  );
 
   const onToggleLayout = useCallback(() => {
     setLayout((prevLayout) => (prevLayout === "LR" ? "TB" : "LR"));
@@ -225,10 +234,19 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({ content, onNodeClick }) => 
     >
       <Controls>
         <ControlButton onClick={onToggleLayout} title="切换布局">
-          <ViewColumnsIcon className={`w-4 h-4 ${layout === "TB" ? "transform rotate-90" : ""}`} />
+          <ViewColumnsIcon
+            className={`w-4 h-4 ${
+              layout === "TB" ? "transform rotate-90" : ""
+            }`}
+          />
         </ControlButton>
       </Controls>
-      <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e0e0e0" />
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={12}
+        size={1}
+        color="#e0e0e0"
+      />
     </ReactFlow>
   );
 };

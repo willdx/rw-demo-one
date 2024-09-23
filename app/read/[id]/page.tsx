@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
 import FlowChart from "../../components/NodeTree";
@@ -24,6 +24,8 @@ const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const [selectedContent, setSelectedContent] = useState<string>("");
   const [markdownTreeContent, setMarkdownTreeContent] = useState<string>("");
+  const [selectedMarkdownContent, setSelectedMarkdownContent] =
+    useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
 
@@ -35,18 +37,35 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
     border-r border-forest-border relative overflow-hidden
   `;
 
-  const handleNodeClick = useCallback((content: string) => {
+  const handleNodeTreeSelect = useCallback((content: string) => {
     setSelectedContent(content);
-    setMarkdownTreeContent(content); // 更新Markdown树的内容，但不切换标签
+    setMarkdownTreeContent(content);
+    // 当选择节点树中的节点时，重置 Markdown 树的选中内容
+    setSelectedMarkdownContent("");
   }, []);
 
-  const handleMarkdownNodeClick = useCallback((content: string) => {
-    setSelectedContent(content); // 只更新选中的内容，不更新 Markdown 树
+  const handleMarkdownTreeSelect = useCallback((content: string) => {
+    setSelectedMarkdownContent(content);
   }, []);
 
-  const handleTabClick = useCallback((tab: "node" | "markdown") => {
-    setActiveTab(tab);
-  }, []);
+  const handleTabClick = useCallback(
+    (tab: "node" | "markdown") => {
+      setActiveTab(tab);
+      if (tab === "markdown" && !selectedMarkdownContent) {
+        setSelectedMarkdownContent(selectedContent);
+      }
+    },
+    [selectedContent, selectedMarkdownContent]
+  );
+
+  useEffect(() => {
+    if (activeTab === "node") {
+      setSelectedMarkdownContent("");
+    }
+  }, [activeTab]);
+
+  const displayContent =
+    activeTab === "node" ? selectedContent : selectedMarkdownContent;
 
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
@@ -77,40 +96,40 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
               onClick={() => handleTabClick("markdown")}
             >
               <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
-              Markdown树
+              内容树
             </button>
           </div>
           <div className="flex-grow overflow-hidden p-2">
-            {activeTab === "node" && (
-              <ReactFlowProvider>
+            <ReactFlowProvider>
+              {activeTab === "node" && (
                 <FlowChart
-                  onNodeClick={handleNodeClick}
+                  onNodeClick={handleNodeTreeSelect}
                   documentId={params.id}
+                  selectedContent={selectedContent}
                 />
-              </ReactFlowProvider>
-            )}
-            {activeTab === "markdown" && markdownTreeContent && (
-              <ReactFlowProvider>
+              )}
+              {activeTab === "markdown" && markdownTreeContent && (
                 <MarkdownTree
                   content={markdownTreeContent}
-                  onNodeClick={handleMarkdownNodeClick}
+                  onNodeClick={handleMarkdownTreeSelect}
+                  selectedContent={selectedMarkdownContent}
                 />
-              </ReactFlowProvider>
-            )}
+              )}
+            </ReactFlowProvider>
           </div>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden bg-forest-content">
         <div className="flex-grow overflow-auto px-8 py-6">
-          {selectedContent ? (
+          {displayContent ? (
             <div className="max-w-3xl mx-auto">
-              <MarkdownRenderer content={selectedContent} />
+              <MarkdownRenderer content={displayContent} />
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-forest-text opacity-50 italic text-center">
-                请点击左侧思维导图的节点以查看内容。
+                请点击左侧思维导图的节点以查看内容
               </p>
             </div>
           )}
