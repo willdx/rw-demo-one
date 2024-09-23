@@ -10,6 +10,7 @@ import {
   ChevronRightIcon,
   DocumentTextIcon,
   BookOpenIcon,
+  SwatchIcon,
 } from "@heroicons/react/24/outline";
 
 const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
@@ -28,6 +29,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
     useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
+  const [bgColor, setBgColor] = useState("#FFFFFF");
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 
@@ -66,6 +68,10 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
 
   const displayContent =
     activeTab === "node" ? selectedContent : selectedMarkdownContent;
+
+  const handleBgColorChange = (color: string) => {
+    setBgColor(color);
+  };
 
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
@@ -121,7 +127,27 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden bg-forest-content">
-        <div className="flex-grow overflow-auto bg-[#fdfcff] p-4 rounded-md shadow-md">
+        <div className="absolute top-2 right-2 z-10">
+          <div className="dropdown dropdown-end">
+            <label tabIndex={0} className="btn btn-ghost btn-circle">
+              <SwatchIcon className="w-5 h-5" />
+            </label>
+            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+              {["#F7F7F7", "#CEECCF", "#EFE6CA", "#292A2F", "#EDF9F9", "#102952"].map((color) => (
+                <li key={color}>
+                  <a onClick={() => handleBgColorChange(color)}>
+                    <div className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: color }}></div>
+                    {color}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div 
+          className="flex-grow overflow-auto p-4 rounded-md shadow-md transition-colors duration-200"
+          style={{ backgroundColor: bgColor }}
+        >
           {displayContent ? (
             <MarkdownRenderer content={displayContent} />
           ) : (
