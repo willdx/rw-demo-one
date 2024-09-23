@@ -121,6 +121,17 @@ const config: Config = {
             },
           },
         },
+        DEFAULT: {
+          css: {
+            'h1': {
+              'border-bottom': 'none', // 去掉一级标题下的线
+            },
+            'h2': {
+              'border-bottom': 'none', // 去掉二级标题下的线
+            },
+            // 其他标题样式保持不变
+          },
+        },
       }),
     },
   },

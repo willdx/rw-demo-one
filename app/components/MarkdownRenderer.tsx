@@ -18,6 +18,20 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
+          h1({ node, ...props }) {
+            return (
+              <h1 className="text-center border-b-0" {...props}>
+                {props.children}
+              </h1>
+            );
+          },
+          h2({ node, ...props }) {
+            return (
+              <h2 className="border-b-0" {...props}>
+                {props.children}
+              </h2>
+            );
+          },
           code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || "");
             return !inline && match ? (
