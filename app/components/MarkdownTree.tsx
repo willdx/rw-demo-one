@@ -136,7 +136,7 @@ const formatMarkdownData = (
         source: nodeId,
         target: childId,
         type: "smoothstep",
-        style: { stroke: "#42b983", strokeWidth: 3 },
+        style: { stroke: "#42b983", strokeWidth: 3 }, // 加粗流线型线条
         animated: true,
       });
       processNode(childNode, depth + 1);
@@ -197,6 +197,36 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
     return formatMarkdownData(parsedNodes);
   }, [content]);
 
+  const updateEdgeStylesOnNodeClick = (selectedNodeId: string, nodes: Node[], edges: Edge[]) => {
+    const selectedNode = nodes.find(node => node.id === selectedNodeId);
+    if (!selectedNode) return edges;
+
+    const selectedNodeIds = new Set<string>();
+    const traverse = (nodeId: string) => {
+      selectedNodeIds.add(nodeId);
+      edges
+        .filter(edge => edge.source === nodeId)
+        .forEach(edge => traverse(edge.target));
+    };
+
+    // Traverse from root to selected node
+    const traverseToRoot = (nodeId: string) => {
+      selectedNodeIds.add(nodeId);
+      edges
+        .filter(edge => edge.target === nodeId)
+        .forEach(edge => traverseToRoot(edge.source));
+    };
+
+    traverseToRoot(selectedNodeId);
+    traverse(selectedNodeId);
+
+    return edges.map(edge => ({
+      ...edge,
+      style: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target) ? { stroke: '#42b983', strokeWidth: 3 } : { stroke: '#888', strokeWidth: 2 },
+      animated: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
+    }));
+  };
+
   useEffect(() => {
     const layoutedElements = getLayoutedElements(
       formattedData.nodes,
@@ -210,16 +240,23 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
         isSelected: node.data.content === selectedContent
       }
     }));
+    const updatedEdges = updateEdgeStylesOnNodeClick(
+      updatedNodes.find(node => node.data.isSelected)?.id || updatedNodes[0].id,
+      updatedNodes,
+      layoutedElements.edges
+    );
     setNodes(updatedNodes);
-    setEdges(layoutedElements.edges);
+    setEdges(updatedEdges);
     fitView({ padding: 0.2, duration: 200 });
   }, [formattedData, layout, setNodes, setEdges, selectedContent, fitView]);
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       onNodeClick(node.data.content as string);
+      const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
+      setEdges(updatedEdges);
     },
-    [onNodeClick]
+    [onNodeClick, nodes, edges, setEdges]
   );
 
   const onToggleLayout = useCallback(() => {
