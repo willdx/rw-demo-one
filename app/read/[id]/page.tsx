@@ -121,7 +121,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden bg-forest-content">
-        <div className="flex-grow overflow-auto">
+        <div className="flex-grow overflow-auto bg-[#fdfcff] p-4 rounded-md shadow-md">
           {displayContent ? (
             <MarkdownRenderer content={displayContent} />
           ) : (
