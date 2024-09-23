@@ -186,10 +186,18 @@ const CustomNode: React.FC<{ data: { label: string; depth: number; isSelected: b
   data,
 }) => (
   <>
-    <div className={`px-3 py-2 bg-white border-2 rounded-md shadow-sm transition-all duration-200 ${
-      data.isSelected ? 'border-forest-accent bg-forest-accent/10' : 'border-forest-border'
+    <div className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
+      data.depth === 0
+        ? 'bg-forest-accent border-2 border-forest-accent'
+        : data.isSelected
+        ? 'bg-forest-accent/10 border-2 border-forest-accent'
+        : 'bg-white border-2 border-forest-border'
     }`}>
-      <span className="text-sm font-medium text-forest-text">{data.label}</span>
+      <span className={`text-sm font-medium ${
+        data.depth === 0
+          ? 'text-white font-bold'
+          : 'text-forest-text'
+      }`}>{data.label}</span>
     </div>
     <Handle
       type="target"
