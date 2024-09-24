@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { ApolloWrapper } from "./apollo-provider";
 import { ThemeProvider } from "./theme-provider";
+import ApolloWrapper from "./components/ApolloWrapper";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
