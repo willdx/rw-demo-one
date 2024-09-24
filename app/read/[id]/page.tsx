@@ -29,7 +29,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
     useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
-  const [bgColor, setBgColor] = useState("#FFFFFF");
+  const [bgColor, setBgColor] = useState("#F7F7F7"); // 设置默认背景颜色
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 

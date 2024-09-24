@@ -21,7 +21,7 @@ import "@xyflow/react/dist/style.css";
 import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
-import TreeSkeleton from './TreeSkeleton';
+import TreeSkeleton from "./TreeSkeleton";
 
 const GET_DOCUMENTS = gql`
   query Documents(
@@ -168,7 +168,7 @@ const formatGraphData = (
           source: nodeId,
           target: childId,
           type: "smoothstep",
-          style: { stroke: '#42b983', strokeWidth: 3 },
+          style: { stroke: "#42b983", strokeWidth: 3 },
           animated: true,
         });
         processNode(childNode, depth + 1);
@@ -182,22 +182,26 @@ const formatGraphData = (
 };
 
 // 更新自定义节点组件
-const CustomNode: React.FC<{ data: { label: string; depth: number; isSelected: boolean } }> = ({
-  data,
-}) => (
+const CustomNode: React.FC<{
+  data: { label: string; depth: number; isSelected: boolean };
+}> = ({ data }) => (
   <>
-    <div className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
-      data.depth === 0
-        ? 'bg-forest-accent border-2 border-forest-accent'
-        : data.isSelected
-        ? 'bg-forest-accent/10 border-2 border-forest-accent'
-        : 'bg-white border-2 border-forest-border'
-    }`}>
-      <span className={`text-sm font-medium ${
+    <div
+      className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
         data.depth === 0
-          ? 'text-white font-bold'
-          : 'text-forest-text'
-      }`}>{data.label}</span>
+          ? "bg-forest-accent border-2 border-forest-accent"
+          : data.isSelected
+          ? "bg-forest-accent/10 border-2 border-forest-accent"
+          : "bg-white border-2 border-forest-border"
+      }`}
+    >
+      <span
+        className={`text-sm font-medium ${
+          data.depth === 0 ? "text-white font-bold" : "text-forest-text"
+        }`}
+      >
+        {data.label}
+      </span>
     </div>
     <Handle
       type="target"
@@ -222,8 +226,8 @@ const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
     result.push(nodeId);
 
     edges
-      .filter(edge => edge.source === nodeId)
-      .forEach(edge => dfs(edge.target));
+      .filter((edge) => edge.source === nodeId)
+      .forEach((edge) => dfs(edge.target));
   };
 
   if (nodes.length > 0) {
@@ -248,7 +252,9 @@ const FlowChart: React.FC<FlowChartProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const [showSkeleton, setShowSkeleton] = useState<boolean>(false);
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
+    "auto"
+  );
   const { fitView } = useReactFlow();
 
   const formattedData = useMemo(() => {
@@ -258,33 +264,41 @@ const FlowChart: React.FC<FlowChartProps> = ({
     return { nodes: [], edges: [] };
   }, [data]);
 
-  const updateEdgeStylesOnNodeClick = (selectedNodeId: string, nodes: Node[], edges: Edge[]) => {
-    const selectedNode = nodes.find(node => node.id === selectedNodeId);
+  const updateEdgeStylesOnNodeClick = (
+    selectedNodeId: string,
+    nodes: Node[],
+    edges: Edge[]
+  ) => {
+    const selectedNode = nodes.find((node) => node.id === selectedNodeId);
     if (!selectedNode) return edges;
 
     const selectedNodeIds = new Set<string>();
     const traverse = (nodeId: string) => {
       selectedNodeIds.add(nodeId);
       edges
-        .filter(edge => edge.source === nodeId)
-        .forEach(edge => traverse(edge.target));
+        .filter((edge) => edge.source === nodeId)
+        .forEach((edge) => traverse(edge.target));
     };
 
     // Traverse from root to selected node
     const traverseToRoot = (nodeId: string) => {
       selectedNodeIds.add(nodeId);
       edges
-        .filter(edge => edge.target === nodeId)
-        .forEach(edge => traverseToRoot(edge.source));
+        .filter((edge) => edge.target === nodeId)
+        .forEach((edge) => traverseToRoot(edge.source));
     };
 
     traverseToRoot(selectedNodeId);
     traverse(selectedNodeId);
 
-    return edges.map(edge => ({
+    return edges.map((edge) => ({
       ...edge,
-      style: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target) ? { stroke: '#42b983', strokeWidth: 3 } : { stroke: '#888', strokeWidth: 2 },
-      animated: selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
+      style:
+        selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+          ? { stroke: "#42b983", strokeWidth: 3 }
+          : { stroke: "#888", strokeWidth: 2 },
+      animated:
+        selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
     }));
   };
 
@@ -295,25 +309,40 @@ const FlowChart: React.FC<FlowChartProps> = ({
     if (nodes.length > 0 && edges.length > 0) {
       const order = dfsTraversal(nodes, edges);
       setDfsOrder(order);
-      setCurrentDfsIndex(order.findIndex(id => nodes.find(node => node.id === id)?.data.content === selectedContent));
+      setCurrentDfsIndex(
+        order.findIndex(
+          (id) =>
+            nodes.find((node) => node.id === id)?.data.content ===
+            selectedContent
+        )
+      );
     }
   }, [nodes, edges, selectedContent]);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (event.key === "ArrowLeft") {
-      setCurrentDfsIndex(prevIndex => {
-        const newIndex = Math.max(prevIndex - 1, 0);
-        onNodeClick(nodes.find(node => node.id === dfsOrder[newIndex])?.data.content || "");
-        return newIndex;
-      });
-    } else if (event.key === "ArrowRight") {
-      setCurrentDfsIndex(prevIndex => {
-        const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
-        onNodeClick(nodes.find(node => node.id === dfsOrder[newIndex])?.data.content || "");
-        return newIndex;
-      });
-    }
-  }, [dfsOrder, nodes, onNodeClick]);
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.max(prevIndex - 1, 0);
+          onNodeClick(
+            nodes.find((node) => node.id === dfsOrder[newIndex])?.data
+              .content || ""
+          );
+          return newIndex;
+        });
+      } else if (event.key === "ArrowRight") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
+          onNodeClick(
+            nodes.find((node) => node.id === dfsOrder[newIndex])?.data
+              .content || ""
+          );
+          return newIndex;
+        });
+      }
+    },
+    [dfsOrder, nodes, onNodeClick]
+  );
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -332,11 +361,14 @@ const FlowChart: React.FC<FlowChartProps> = ({
         ...node,
         data: {
           ...node.data,
-          isSelected: node.data.content === selectedContent || (index === 0 && !selectedContent)
-        }
+          isSelected:
+            node.data.content === selectedContent ||
+            (index === 0 && !selectedContent),
+        },
       }));
       const updatedEdges = updateEdgeStylesOnNodeClick(
-        updatedNodes.find(node => node.data.isSelected)?.id || updatedNodes[0].id,
+        updatedNodes.find((node) => node.data.isSelected)?.id ||
+          updatedNodes[0].id,
         updatedNodes,
         formattedData.edges
       );
@@ -349,7 +381,14 @@ const FlowChart: React.FC<FlowChartProps> = ({
       }
     }
     return () => clearTimeout(timer);
-  }, [loading, formattedData, setNodes, setEdges, selectedContent, onNodeClick]);
+  }, [
+    loading,
+    formattedData,
+    setNodes,
+    setEdges,
+    selectedContent,
+    onNodeClick,
+  ]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -367,8 +406,13 @@ const FlowChart: React.FC<FlowChartProps> = ({
 
   const onToggleLayout = useCallback(() => {
     setLayout((prevLayout) => {
-      const newLayout = prevLayout === "auto" ? "horizontal" : prevLayout === "horizontal" ? "vertical" : "auto";
-      
+      const newLayout =
+        prevLayout === "auto"
+          ? "horizontal"
+          : prevLayout === "horizontal"
+          ? "vertical"
+          : "auto";
+
       let layoutedElements;
       if (newLayout === "auto") {
         layoutedElements = formattedData;
@@ -381,12 +425,15 @@ const FlowChart: React.FC<FlowChartProps> = ({
         ...node,
         data: {
           ...node.data,
-          isSelected: node.data.content === selectedContent || (index === 0 && !selectedContent)
-        }
+          isSelected:
+            node.data.content === selectedContent ||
+            (index === 0 && !selectedContent),
+        },
       }));
 
       const updatedEdges = updateEdgeStylesOnNodeClick(
-        updatedNodes.find(node => node.data.isSelected)?.id || updatedNodes[0].id,
+        updatedNodes.find((node) => node.data.isSelected)?.id ||
+          updatedNodes[0].id,
         updatedNodes,
         layoutedElements.edges
       );
@@ -397,7 +444,15 @@ const FlowChart: React.FC<FlowChartProps> = ({
 
       return newLayout;
     });
-  }, [nodes, edges, formattedData, setNodes, setEdges, fitView, selectedContent]);
+  }, [
+    nodes,
+    edges,
+    formattedData,
+    setNodes,
+    setEdges,
+    fitView,
+    selectedContent,
+  ]);
 
   if (showSkeleton) return <TreeSkeleton />;
   if (error) return <p>错误：{error.message}</p>;
@@ -435,7 +490,12 @@ const FlowChart: React.FC<FlowChartProps> = ({
           />
         </ControlButton>
       </Controls>
-      <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e0e0e0" />
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={12}
+        size={1}
+        color="#e0e0e0"
+      />
     </ReactFlow>
   );
 };
