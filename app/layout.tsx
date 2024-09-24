@@ -27,6 +27,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="forest">
+      <head>
+        <link rel="icon" href="/icons/favicon.ico" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-forest-bg`}
       >
