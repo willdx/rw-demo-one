@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { gql, useMutation } from "@apollo/client";
+import { useAuth } from '../contexts/AuthContext';
 
 const SIGN_IN_MUTATION = gql`
   mutation SignIn($email: String!, $password: String!) {
@@ -40,6 +41,8 @@ export default function LoginModal({
 
   const [signIn, { loading, error }] = useMutation(SIGN_IN_MUTATION);
 
+  const { login } = useAuth();
+
   const validateEmail = (email: string) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailPattern.test(email) ? "" : "请输入有效的邮箱地址";
@@ -75,6 +78,7 @@ export default function LoginModal({
 
     try {
       const { data } = await signIn({ variables: { email, password } });
+      login(data.signIn.token, data.signIn.user);
       onLoginSuccess(data.signIn.token, data.signIn.user);
       onClose();
     } catch (err) {

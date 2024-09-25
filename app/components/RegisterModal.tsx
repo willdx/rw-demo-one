@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { gql, useMutation } from "@apollo/client";
+import { useAuth } from '../contexts/AuthContext';
 
 const SIGN_UP_MUTATION = gql`
   mutation SignUp($email: String!, $password: String!, $username: String!) {
@@ -36,6 +37,8 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: Re
   const [passwordError, setPasswordError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  const { login } = useAuth();
 
   const [signUp, { loading: signingUp, error: signUpError }] = useMutation(SIGN_UP_MUTATION);
 
@@ -102,6 +105,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: Re
       const { data } = await signUp({ 
         variables: { email, password, username } 
       });
+      login(data.signUp.token, data.signUp.user);
       onRegisterSuccess(data.signUp.token, data.signUp.user);
       onClose();
     } catch (err) {

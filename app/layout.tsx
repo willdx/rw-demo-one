@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeProvider } from "./theme-provider";
 import ApolloWrapper from "./components/ApolloWrapper";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -26,16 +27,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-theme="forest">
+    <html lang="en">
       <head>
         <link rel="icon" href="/icons/favicon.ico" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-forest-bg`}
-      >
-        <ThemeProvider>
-          <ApolloWrapper>{children}</ApolloWrapper>
-        </ThemeProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
+        <AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ApolloWrapper>{children}</ApolloWrapper>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

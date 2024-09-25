@@ -6,26 +6,25 @@ import { useState } from "react";
 import LoginModal from "./LoginModal";
 import RegisterModal from "./RegisterModal";
 import UserMenu from "./UserMenu";
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Header({ showAlert }: { showAlert: (message: string) => void }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, logout } = useAuth();
 
   const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
     setIsLoginModalOpen(false);
     showAlert('登录成功！');
   };
 
   const handleRegisterSuccess = () => {
-    setIsLoggedIn(true);
     setIsRegisterModalOpen(false);
     showAlert('注册成功！');
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    logout();
     showAlert('已注销！');
   };
 
@@ -49,7 +48,7 @@ export default function Header({ showAlert }: { showAlert: (message: string) => 
             知识库
           </Link>
           <div className="divider divider-horizontal" />
-          {isLoggedIn ? (
+          {user ? (
             <UserMenu onLogout={handleLogout} />
           ) : (
             <div className="flex items-center space-x-4">

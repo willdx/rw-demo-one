@@ -1,14 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useAuth } from "../contexts/AuthContext";
+import Image from "next/image";
+interface UserMenuProps {
+  onLogout: () => void;
+}
 
-export default function UserMenu({ onLogout }: { onLogout: () => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const toggleMenu = () => {
-    setIsOpen(!isOpen);
-  };
+export default function UserMenu({ onLogout }: UserMenuProps) {
+  const { user } = useAuth();
 
   return (
     <div className="dropdown dropdown-end">
@@ -23,17 +22,22 @@ export default function UserMenu({ onLogout }: { onLogout: () => void }) {
           />
         </div>
       </label>
-      <ul tabIndex={0} className="mt-3 p-2 shadow menu menu-compact dropdown-content bg-base-100 rounded-box w-52 border border-base-300">
+      <ul
+        tabIndex={0}
+        className="mt-3 p-2 shadow menu menu-compact dropdown-content bg-base-100 rounded-box w-52 border border-base-300"
+      >
         <li>
-          <a className="justify-between hover:bg-base-200">
-            我的个人资料
-            <span className="badge badge-primary badge-sm">New</span>
+          <a className="justify-between">
+            {user?.username}
+            <span className="badge">New</span>
           </a>
         </li>
-        <li><a className="hover:bg-base-200">开始写作</a></li>
-        <li><a className="hover:bg-base-200">个人中心</a></li>
-        <div className="divider my-0"></div>
-        <li><a onClick={onLogout} className="hover:bg-base-200">注销</a></li> {/* 移除强烈的红色样式 */}
+        <li>
+          <a>设置</a>
+        </li>
+        <li>
+          <a onClick={onLogout}>登出</a>
+        </li>
       </ul>
     </div>
   );
