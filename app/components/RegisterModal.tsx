@@ -1,22 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import CaptchaInput from './CaptchaInput';
+import { gql, useMutation } from "@apollo/client";
+
+const SIGN_UP_MUTATION = gql`
+  mutation SignUp($email: String!, $password: String!, $username: String!) {
+    signUp(email: $email, password: $password, username: $username) {
+      token
+      user {
+        id
+        username
+        email
+      }
+    }
+  }
+`;
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
 
 interface RegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegisterSuccess: () => void; // 注册成功回调
+  onRegisterSuccess: (token: string, user: User) => void;
 }
 
 export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: RegisterModalProps) {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [captcha, setCaptcha] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  const [signUp, { loading: signingUp, error: signUpError }] = useMutation(SIGN_UP_MUTATION);
 
   const validatePassword = (pwd: string) => {
     const lengthValid = pwd.length >= 8;
@@ -58,7 +79,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: Re
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const passwordValidationError = validatePassword(password);
     const emailValidationError = validateEmail(email);
@@ -77,10 +98,16 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: Re
       return;
     }
 
-    // 处理注册逻辑
-    console.log('Register submitted', { email, password, confirmPassword, captcha });
-    onRegisterSuccess(); // 调用注册成功回调
-    onClose();
+    try {
+      const { data } = await signUp({ 
+        variables: { email, password, username } 
+      });
+      onRegisterSuccess(data.signUp.token, data.signUp.user);
+      onClose();
+    } catch (err) {
+      console.error('注册失败:', err);
+      alert('注册失败: ' + (err instanceof Error ? err.message : '未知错误'));
+    }
   };
 
   if (!isOpen) return null;
@@ -101,18 +128,25 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: Re
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                setEmailError(''); // 清除错误提示
+                setEmailError('');
               }}
-              onBlur={handleEmailBlur} // 失去焦点时验证
+              onBlur={handleEmailBlur}
               required
             />
             {emailError && <p className="text-red-500">{emailError}</p>}
           </div>
           <div className="form-control mt-4">
             <label className="label">
-              <span className="label-text">验证码</span> {/* 添加验证码的label */}
+              <span className="label-text">用户名</span>
             </label>
-            <CaptchaInput /> {/* 添加验证码组件 */}
+            <input
+              type="text"
+              placeholder="用户名"
+              className="input input-bordered"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
           </div>
           <div className="form-control mt-4">
             <label className="label">
@@ -125,9 +159,9 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: Re
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                setPasswordError(''); // 清除错误提示
+                setPasswordError('');
               }}
-              onBlur={handlePasswordBlur} // 失去焦点时验证
+              onBlur={handlePasswordBlur}
               required
             />
             {passwordError && <p className="text-red-500">{passwordError}</p>}
@@ -143,15 +177,18 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }: Re
               value={confirmPassword}
               onChange={(e) => {
                 setConfirmPassword(e.target.value);
-                setConfirmPasswordError(''); // 清除错误提示
+                setConfirmPasswordError('');
               }}
-              onBlur={handleConfirmPasswordBlur} // 失去焦点时验证
+              onBlur={handleConfirmPasswordBlur}
               required
             />
             {confirmPasswordError && <p className="text-red-500">{confirmPasswordError}</p>}
           </div>
+          {signUpError && <p className="text-red-500 mt-2">{signUpError.message}</p>}
           <div className="modal-action">
-            <button type="submit" className="btn btn-primary">注册</button>
+            <button type="submit" className="btn btn-primary" disabled={signingUp}>
+              {signingUp ? '注册中...' : '注册'}
+            </button>
             <button type="button" className="btn" onClick={onClose}>取消</button>
           </div>
         </form>

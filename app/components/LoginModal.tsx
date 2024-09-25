@@ -1,11 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import { gql, useMutation } from "@apollo/client";
+
+const SIGN_IN_MUTATION = gql`
+  mutation SignIn($email: String!, $password: String!) {
+    signIn(email: $email, password: $password) {
+      token
+      user {
+        id
+        username
+        email
+      }
+    }
+  }
+`;
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: () => void; // 登录成功回调
+  onLoginSuccess: (token: string, user: User) => void;
 }
 
 export default function LoginModal({
@@ -17,6 +37,8 @@ export default function LoginModal({
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+
+  const [signIn, { loading, error }] = useMutation(SIGN_IN_MUTATION);
 
   const validateEmail = (email: string) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,27 +73,14 @@ export default function LoginModal({
       return;
     }
 
-    // 模拟调用后端接口
-    const response = await mockLogin(email, password);
-    if (response.success) {
-      onLoginSuccess(); // 调用登录成功回调
-    } else {
-      alert("登录失败：" + response.message); // 使用 DaisyUI 的 alert 组件
+    try {
+      const { data } = await signIn({ variables: { email, password } });
+      onLoginSuccess(data.signIn.token, data.signIn.user);
+      onClose();
+    } catch (err) {
+      console.error("登录失败:", err);
+      alert("登录失败: " + (err instanceof Error ? err.message : "未知错误"));
     }
-    onClose();
-  };
-
-  const mockLogin = async (email: string, password: string) => {
-    // 模拟后端登录逻辑
-    return new Promise<{ success: boolean; message: string }>((resolve) => {
-      setTimeout(() => {
-        if (email === "test@example.com" && password === "password123") {
-          resolve({ success: true, message: "" });
-        } else {
-          resolve({ success: false, message: "邮箱或密码错误" });
-        }
-      }, 1000);
-    });
   };
 
   if (!isOpen) return null;
@@ -92,9 +101,9 @@ export default function LoginModal({
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                setEmailError(""); // 清除错误提示
+                setEmailError("");
               }}
-              onBlur={handleEmailBlur} // 失去焦点时验证
+              onBlur={handleEmailBlur}
               required
             />
             {emailError && <p className="text-red-500">{emailError}</p>}
@@ -110,16 +119,17 @@ export default function LoginModal({
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                setPasswordError(""); // 清除错误提示
+                setPasswordError("");
               }}
-              onBlur={handlePasswordBlur} // 失去焦点时验证
+              onBlur={handlePasswordBlur}
               required
             />
             {passwordError && <p className="text-red-500">{passwordError}</p>}
           </div>
+          {error && <p className="text-red-500 mt-2">{error.message}</p>}
           <div className="modal-action">
-            <button type="submit" className="btn btn-primary">
-              登录
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? "登录中..." : "登录"}
             </button>
             <button type="button" className="btn" onClick={onClose}>
               取消
