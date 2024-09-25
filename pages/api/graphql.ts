@@ -6,6 +6,7 @@ import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import fs from "fs";
 import path from "path";
 import { printSchema } from "graphql";
+import { ApolloServerPluginLandingPageGraphQLPlayground } from "@apollo/server-plugin-landing-page-graphql-playground";
 
 const typeDefs = gql`
   type User {
@@ -59,7 +60,10 @@ const createApolloServer = async () => {
   fs.writeFileSync(filePath, schemaString);
   console.log(`Schema has been written to ${filePath}`);
 
-  return new ApolloServer({ schema });
+  return new ApolloServer({
+    schema,
+    plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
+  });
 };
 
 export default startServerAndCreateNextHandler(await createApolloServer());

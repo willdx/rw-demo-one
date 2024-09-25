@@ -12,6 +12,7 @@
   "dependencies": {
     "@apollo/client": "^3.11.8",
     "@apollo/server": "^4.11.0",
+    "@apollo/server-plugin-landing-page-graphql-playground": "^4.0.1",
     "@as-integrations/next": "^3.1.0",
     "@headlessui/react": "^2.1.8",
     "@heroicons/react": "^2.1.5",
@@ -28,6 +29,7 @@
     "bcrypt": "^5.1.1",
     "dagre": "^0.8.5",
     "graphql": "^16.9.0",
+    "graphql-playground-middleware-express": "^1.7.23",
     "graphql-tag": "^2.12.6",
     "jsonwebtoken": "^9.0.2",
     "katex": "^0.16.11",
