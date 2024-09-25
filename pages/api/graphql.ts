@@ -8,9 +8,25 @@ import path from "path";
 import { printSchema } from "graphql";
 
 const typeDefs = gql`
+  type User {
+    id: ID! @id
+    username: String! @unique
+    email: String! @unique
+    password: String!
+    createdAt: DateTime! @timestamp(operations: [CREATE])
+    updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+    roles: [Role!]! @relationship(type: "HAS_ROLE", direction: OUT)
+    documents: [Document!]! @relationship(type: "CREATED", direction: OUT)
+  }
+
+  type Role {
+    id: ID! @id
+    name: String! @unique
+    users: [User!]! @relationship(type: "HAS_ROLE", direction: IN)
+  }
+
   type Document {
     id: ID! @id
-    userId: String!
     fileName: String!
     content: String!
     createdAt: DateTime! @timestamp(operations: [CREATE])
@@ -19,6 +35,7 @@ const typeDefs = gql`
     children: [Document!]!
       @relationship(type: "HAS_CHILD", direction: OUT, properties: "ChildOrder")
     parent: Document @relationship(type: "HAS_CHILD", direction: IN)
+    creator: User! @relationship(type: "CREATED", direction: IN)
   }
 
   type ChildOrder @relationshipProperties {
