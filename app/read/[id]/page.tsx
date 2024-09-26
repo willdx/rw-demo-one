@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
-import FlowChart from "../../components/NodeTree";
+import NodeTree from "../../components/NodeTree";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import {
   ChevronLeftIcon,
@@ -108,7 +108,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           <div className="flex-grow overflow-hidden p-2">
             <ReactFlowProvider>
               {activeTab === "node" && (
-                <FlowChart
+                <NodeTree
                   onNodeClick={handleNodeTreeSelect}
                   documentId={params.id}
                   selectedContent={selectedContent}
@@ -132,11 +132,24 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
             <label tabIndex={0} className="btn btn-ghost btn-circle">
               <SwatchIcon className="w-5 h-5" />
             </label>
-            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
-              {["#F7F7F7", "#CEECCF", "#EFE6CA", "#292A2F", "#EDF9F9", "#102952"].map((color) => (
+            <ul
+              tabIndex={0}
+              className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+            >
+              {[
+                "#F7F7F7",
+                "#CEECCF",
+                "#EFE6CA",
+                "#292A2F",
+                "#EDF9F9",
+                "#102952",
+              ].map((color) => (
                 <li key={color}>
                   <a onClick={() => handleBgColorChange(color)}>
-                    <div className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: color }}></div>
+                    <div
+                      className="w-4 h-4 rounded-full mr-2"
+                      style={{ backgroundColor: color }}
+                    ></div>
                     {color}
                   </a>
                 </li>
@@ -144,7 +157,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
             </ul>
           </div>
         </div>
-        <div 
+        <div
           className="flex-grow overflow-auto p-4 rounded-md shadow-md transition-colors duration-200"
           style={{ backgroundColor: bgColor }}
         >

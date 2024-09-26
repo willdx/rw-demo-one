@@ -238,7 +238,7 @@ const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
   return result;
 };
 
-const FlowChart: React.FC<FlowChartProps> = ({
+const NodeTree: React.FC<FlowChartProps> = ({
   onNodeClick,
   documentId,
   selectedContent,
@@ -264,7 +264,7 @@ const FlowChart: React.FC<FlowChartProps> = ({
     },
     context: {
       headers: {
-        authorization: token ? `Bearer ${token}` : '',
+        authorization: token ? `Bearer ${token}` : "",
       },
     },
     skip: !token, // 如果没有 token，跳过查询
@@ -532,4 +532,4 @@ const FlowChart: React.FC<FlowChartProps> = ({
   );
 };
 
-export default FlowChart;
+export default NodeTree;

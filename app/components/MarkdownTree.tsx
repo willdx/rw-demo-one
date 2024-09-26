@@ -18,9 +18,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import dagre from "dagre";
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import { visit } from 'unist-util-visit';
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import { visit } from "unist-util-visit";
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 40;
@@ -37,6 +37,8 @@ interface MarkdownTreeProps {
   content: string;
   onNodeClick: (content: string) => void;
   selectedContent: string;
+  onNodeSelect: (nodeId: string) => void;
+  updateTrigger: number;
 }
 
 const CustomNode: React.FC<{
@@ -75,12 +77,12 @@ const CustomNode: React.FC<{
 
 const parseMarkdownToAST = (content: string): MarkdownNode[] => {
   const tree = unified().use(remarkParse).parse(content);
-  const root: MarkdownNode = { id: 'root', content: '', children: [] };
+  const root: MarkdownNode = { id: "root", content: "", children: [] };
   const stack: MarkdownNode[] = [root];
 
-  visit(tree, 'heading', (node: any) => {
+  visit(tree, "heading", (node: any) => {
     const level = node.depth;
-    const content = node.children.map((child: any) => child.value).join('');
+    const content = node.children.map((child: any) => child.value).join("");
     const newNode: MarkdownNode = {
       id: `node-${Math.random().toString(36).substr(2, 9)}`,
       content,
@@ -186,8 +188,8 @@ const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
     result.push(nodeId);
 
     edges
-      .filter(edge => edge.source === nodeId)
-      .forEach(edge => dfs(edge.target));
+      .filter((edge) => edge.source === nodeId)
+      .forEach((edge) => dfs(edge.target));
   };
 
   if (nodes.length > 0) {
@@ -201,6 +203,8 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
   content,
   onNodeClick,
   selectedContent,
+  onNodeSelect,
+  updateTrigger,
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
@@ -259,25 +263,40 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
     if (nodes.length > 0 && edges.length > 0) {
       const order = dfsTraversal(nodes, edges);
       setDfsOrder(order);
-      setCurrentDfsIndex(order.findIndex(id => nodes.find(node => node.id === id)?.data.content === selectedContent));
+      setCurrentDfsIndex(
+        order.findIndex(
+          (id) =>
+            nodes.find((node) => node.id === id)?.data.content ===
+            selectedContent
+        )
+      );
     }
   }, [nodes, edges, selectedContent]);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (event.key === "ArrowLeft") {
-      setCurrentDfsIndex(prevIndex => {
-        const newIndex = Math.max(prevIndex - 1, 0);
-        onNodeClick(nodes.find(node => node.id === dfsOrder[newIndex])?.data.content || "");
-        return newIndex;
-      });
-    } else if (event.key === "ArrowRight") {
-      setCurrentDfsIndex(prevIndex => {
-        const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
-        onNodeClick(nodes.find(node => node.id === dfsOrder[newIndex])?.data.content || "");
-        return newIndex;
-      });
-    }
-  }, [dfsOrder, nodes, onNodeClick]);
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.max(prevIndex - 1, 0);
+          onNodeClick(
+            nodes.find((node) => node.id === dfsOrder[newIndex])?.data
+              .content || ""
+          );
+          return newIndex;
+        });
+      } else if (event.key === "ArrowRight") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
+          onNodeClick(
+            nodes.find((node) => node.id === dfsOrder[newIndex])?.data
+              .content || ""
+          );
+          return newIndex;
+        });
+      }
+    },
+    [dfsOrder, nodes, onNodeClick]
+  );
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -320,10 +339,11 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       onNodeClick(node.data.content as string);
+      onNodeSelect(node.id);
       const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
       setEdges(updatedEdges);
     },
-    [onNodeClick, nodes, edges, setEdges]
+    [onNodeClick, onNodeSelect, nodes, edges, setEdges]
   );
 
   const onToggleLayout = useCallback(() => {
