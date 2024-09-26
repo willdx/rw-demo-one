@@ -22,6 +22,7 @@ import { useQuery, gql } from "@apollo/client";
 import dagre from "dagre";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import TreeSkeleton from "./TreeSkeleton";
+import { useAuth } from "../contexts/AuthContext";
 
 const GET_DOCUMENTS = gql`
   query Documents(
@@ -242,11 +243,31 @@ const FlowChart: React.FC<FlowChartProps> = ({
   documentId,
   selectedContent,
 }) => {
+  const { token, user } = useAuth();
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+
+  useEffect(() => {
+    // 检查认证状态
+    if (token && user) {
+      setIsAuthChecked(true);
+    } else {
+      // 如果没有 token 或 user，可能需要重新获取
+      // 这里可以添加重新获取 token 的逻辑
+      setIsAuthChecked(true);
+    }
+  }, [token, user]);
+
   const { loading, error, data } = useQuery(GET_DOCUMENTS, {
     variables: {
       where: { id: documentId },
       sort: [{ edge: { order: "ASC" }, node: { updatedAt: "DESC" } }],
     },
+    context: {
+      headers: {
+        authorization: token ? `Bearer ${token}` : '',
+      },
+    },
+    skip: !token, // 如果没有 token，跳过查询
   });
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
@@ -355,7 +376,7 @@ const FlowChart: React.FC<FlowChartProps> = ({
     let timer: NodeJS.Timeout;
     if (loading) {
       timer = setTimeout(() => setShowSkeleton(true), 300);
-    } else {
+    } else if (data) {
       setShowSkeleton(false);
       const updatedNodes = formattedData.nodes.map((node, index) => ({
         ...node,
@@ -368,7 +389,7 @@ const FlowChart: React.FC<FlowChartProps> = ({
       }));
       const updatedEdges = updateEdgeStylesOnNodeClick(
         updatedNodes.find((node) => node.data.isSelected)?.id ||
-          updatedNodes[0].id,
+          (updatedNodes.length > 0 ? updatedNodes[0].id : ""),
         updatedNodes,
         formattedData.edges
       );
@@ -383,6 +404,7 @@ const FlowChart: React.FC<FlowChartProps> = ({
     return () => clearTimeout(timer);
   }, [
     loading,
+    data,
     formattedData,
     setNodes,
     setEdges,
@@ -397,7 +419,7 @@ const FlowChart: React.FC<FlowChartProps> = ({
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      onNodeClick(node.data.content);
+      onNodeClick(node.data.content as string);
       const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
       setEdges(updatedEdges);
     },
@@ -421,19 +443,21 @@ const FlowChart: React.FC<FlowChartProps> = ({
         layoutedElements = getLayoutedElements(nodes, edges, direction);
       }
 
-      const updatedNodes = layoutedElements.nodes.map((node, index) => ({
-        ...node,
-        data: {
-          ...node.data,
-          isSelected:
-            node.data.content === selectedContent ||
-            (index === 0 && !selectedContent),
-        },
-      }));
+      const updatedNodes = layoutedElements.nodes.map(
+        (node: Node, index: number) => ({
+          ...node,
+          data: {
+            ...node.data,
+            isSelected:
+              node.data.content === selectedContent ||
+              (index === 0 && !selectedContent),
+          },
+        })
+      );
 
       const updatedEdges = updateEdgeStylesOnNodeClick(
         updatedNodes.find((node) => node.data.isSelected)?.id ||
-          updatedNodes[0].id,
+          (updatedNodes.length > 0 ? updatedNodes[0].id : ""),
         updatedNodes,
         layoutedElements.edges
       );
@@ -453,6 +477,14 @@ const FlowChart: React.FC<FlowChartProps> = ({
     fitView,
     selectedContent,
   ]);
+
+  if (!isAuthChecked) {
+    return <TreeSkeleton />;
+  }
+
+  if (!token) {
+    return <p>请先登录</p>;
+  }
 
   if (showSkeleton) return <TreeSkeleton />;
   if (error) return <p>错误：{error.message}</p>;

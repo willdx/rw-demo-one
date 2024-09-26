@@ -10,6 +10,7 @@ import { printSchema } from "graphql";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "@apollo/server-plugin-landing-page-graphql-playground";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { NextApiRequest, NextApiResponse } from "next";
 
 const typeDefs = gql`
   type User {
@@ -23,11 +24,15 @@ const typeDefs = gql`
     documents: [Document!]! @relationship(type: "CREATED", direction: OUT)
   }
 
+  extend type User @authentication
+
   type Role {
     id: ID! @id
     name: String! @unique
     users: [User!]! @relationship(type: "HAS_ROLE", direction: IN)
   }
+
+  extend type Role @authentication
 
   type Document {
     id: ID! @id
@@ -41,6 +46,9 @@ const typeDefs = gql`
     parent: Document @relationship(type: "HAS_CHILD", direction: IN)
     creator: User! @relationship(type: "CREATED", direction: IN)
   }
+
+  extend type Document
+    @authentication(operations: [CREATE, READ, UPDATE, DELETE])
 
   type ChildOrder @relationshipProperties {
     order: Float!
@@ -67,6 +75,11 @@ const User = ogm.model("User");
 
 const neoSchema = new Neo4jGraphQL({
   typeDefs,
+  features: {
+    authorization: {
+      key: process.env.JWT_SECRET || "",
+    },
+  },
   driver,
   resolvers: {
     Mutation: {
@@ -91,11 +104,9 @@ const neoSchema = new Neo4jGraphQL({
           ],
         });
 
-        const token = jwt.sign(
-          { userId: users[0].id },
-          process.env.JWT_SECRET!,
-          { expiresIn: "1d" }
-        );
+        const token = jwt.sign({ sub: users[0].id }, process.env.JWT_SECRET!, {
+          expiresIn: "1d",
+        });
 
         return {
           token,
@@ -118,7 +129,7 @@ const neoSchema = new Neo4jGraphQL({
           throw new Error(`密码错误`);
         }
 
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
+        const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET!, {
           expiresIn: "1d",
         });
 
@@ -147,4 +158,33 @@ const createApolloServer = async () => {
   });
 };
 
-export default startServerAndCreateNextHandler(await createApolloServer());
+export default startServerAndCreateNextHandler(await createApolloServer(), {
+  context: async (req: NextApiRequest, res: NextApiResponse) => {
+    // 解析 JWT Token 并将用户信息传入 context
+    const token = req.headers.authorization || "";
+    let currentUser = null;
+    let decodedToken = null;
+
+    if (token) {
+      try {
+        // 解码 JWT Token 获取用户信息
+        decodedToken = jwt.verify(
+          token.replace("Bearer ", ""),
+          process.env.JWT_SECRET!
+        ) as { sub: string };
+        const [user] = await User.find({ where: { id: decodedToken.sub } });
+        currentUser = user;
+      } catch (err) {
+        console.error("无效或过期的令牌", err);
+      }
+    }
+
+    return {
+      req,
+      res,
+      currentUser,
+      token,
+      jwt: decodedToken,
+    };
+  },
+});
