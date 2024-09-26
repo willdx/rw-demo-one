@@ -26,9 +26,14 @@ const typeDefs = gql`
 
   extend type User @authentication
 
+  enum RoleName {
+    USER
+    ADMIN
+  }
+
   type Role {
     id: ID! @id
-    name: String! @unique
+    name: RoleName! @unique
     users: [User!]! @relationship(type: "HAS_ROLE", direction: IN)
   }
 
@@ -57,6 +62,7 @@ const typeDefs = gql`
   type Mutation {
     signUp(email: String!, password: String!, username: String!): AuthPayload!
     signIn(email: String!, password: String!): AuthPayload!
+    createInitialRoles: Boolean!
   }
 
   type AuthPayload {
@@ -72,6 +78,7 @@ const driver = neo4j.driver(
 
 const ogm = new OGM({ typeDefs, driver });
 const User = ogm.model("User");
+const Role = ogm.model("Role");
 
 const neoSchema = new Neo4jGraphQL({
   typeDefs,
@@ -94,12 +101,24 @@ const neoSchema = new Neo4jGraphQL({
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // 查找普通用户角色
+        const [userRole] = await Role.find({
+          where: { name: "USER" },
+        });
+
+        if (!userRole) {
+          throw new Error(`未找到普通用户角色，请先创建角色`);
+        }
+
         const { users } = await User.create({
           input: [
             {
               username,
               email,
               password: hashedPassword,
+              roles: {
+                connect: [{ where: { node: { id: userRole.id } } }],
+              },
             },
           ],
         });
@@ -137,6 +156,19 @@ const neoSchema = new Neo4jGraphQL({
           token,
           user,
         };
+      },
+
+      createInitialRoles: async () => {
+        const existingRoles = await Role.find();
+        if (existingRoles.length > 0) {
+          return false; // 角色已存在，不需要创建
+        }
+
+        await Role.create({
+          input: [{ name: "USER" }, { name: "ADMIN" }],
+        });
+
+        return true;
       },
     },
   },
