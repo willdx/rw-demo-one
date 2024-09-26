@@ -18,6 +18,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import dagre from "dagre";
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import { visit } from 'unist-util-visit';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 40;
@@ -27,7 +30,6 @@ const VERTICAL_GAP = 20;
 interface MarkdownNode {
   id: string;
   content: string;
-  fullContent: string;
   children: MarkdownNode[];
 }
 
@@ -71,43 +73,31 @@ const CustomNode: React.FC<{
   </>
 );
 
-const parseMarkdown = (content: string): MarkdownNode[] => {
-  const lines = content.split("\n");
-  const root: MarkdownNode[] = [];
-  const stack: MarkdownNode[] = [];
+const parseMarkdownToAST = (content: string): MarkdownNode[] => {
+  const tree = unified().use(remarkParse).parse(content);
+  const root: MarkdownNode = { id: 'root', content: '', children: [] };
+  const stack: MarkdownNode[] = [root];
 
-  lines.forEach((line, index) => {
-    const trimmedLine = line.trim();
-    if (trimmedLine.startsWith("#")) {
-      const level = trimmedLine.split(" ")[0].length;
-      const newNode: MarkdownNode = {
-        id: `node-${index}`,
-        content: trimmedLine.substring(level).trim(),
-        fullContent: trimmedLine + "\n",
-        children: [],
-      };
+  visit(tree, 'heading', (node: any) => {
+    const level = node.depth;
+    const content = node.children.map((child: any) => child.value).join('');
+    const newNode: MarkdownNode = {
+      id: `node-${Math.random().toString(36).substr(2, 9)}`,
+      content,
+      children: [],
+    };
 
-      while (stack.length >= level) {
-        stack.pop();
-      }
+    while (stack.length > level) {
+      stack.pop();
+    }
 
-      if (stack.length === 0) {
-        root.push(newNode);
-      } else {
-        stack[stack.length - 1].children.push(newNode);
-      }
+    if (stack.length === level) {
+      stack[stack.length - 1].children.push(newNode);
       stack.push(newNode);
-    } else if (stack.length > 0) {
-      stack[stack.length - 1].fullContent += line + "\n";
     }
   });
 
-  const setFullContent = (node: MarkdownNode) => {
-    node.children.forEach(setFullContent);
-  };
-  root.forEach(setFullContent);
-
-  return root;
+  return root.children;
 };
 
 const formatMarkdownData = (
@@ -124,7 +114,7 @@ const formatMarkdownData = (
       type: "customNode",
       data: {
         label: node.content,
-        content: node.fullContent,
+        content: node.content,
         isSelected: false,
         depth, // 添加 depth 属性
       },
@@ -220,7 +210,7 @@ const MarkdownTree: React.FC<MarkdownTreeProps> = ({
   );
 
   const formattedData = useMemo(() => {
-    const parsedNodes = parseMarkdown(content);
+    const parsedNodes = parseMarkdownToAST(content);
     return formatMarkdownData(parsedNodes);
   }, [content]);
 
