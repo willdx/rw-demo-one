@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import Vditor from 'vditor';
-import 'vditor/dist/index.css';
+import React, { useEffect, useRef, useState } from "react";
+import Vditor from "vditor";
+import "vditor/dist/index.css";
 
 interface VditorEditorProps {
   content: string;
@@ -15,10 +15,10 @@ const VditorEditor: React.FC<VditorEditorProps> = ({ content, onChange }) => {
 
   useEffect(() => {
     if (!editorRef.current) {
-      editorRef.current = new Vditor('vditor', {
-        height: '100%',
-        mode: 'wysiwyg',
-        theme: 'classic',
+      editorRef.current = new Vditor("vditor", {
+        height: "100%",
+        mode: "wysiwyg",
+        theme: "classic",
         cache: {
           enable: false,
         },
@@ -38,7 +38,7 @@ const VditorEditor: React.FC<VditorEditorProps> = ({ content, onChange }) => {
     }
   }, [content, isEditorReady]);
 
-  return <div id="vditor" className="h-full" />;
+  return <div id="vditor" className="h-full w-full" />; // 确保宽度和高度都为100%
 };
 
 export default VditorEditor;

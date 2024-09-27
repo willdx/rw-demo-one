@@ -9,7 +9,12 @@ import VditorEditor from "../../components/VditorEditor";
 import { useParams } from "next/navigation";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useAuth } from "../../contexts/AuthContext";
-import { ChevronLeftIcon, ChevronRightIcon, BookOpenIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  BookOpenIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 
 export default function WritePage() {
   const params = useParams();
@@ -22,7 +27,9 @@ export default function WritePage() {
   const { token } = useAuth();
 
   const [fullContent, setFullContent] = useState("");
-  const [selectedMarkdownNodeId, setSelectedMarkdownNodeId] = useState<string | null>(null);
+  const [selectedMarkdownNodeId, setSelectedMarkdownNodeId] = useState<
+    string | null
+  >(null);
 
   const { data, loading, error } = useQuery(GET_DOCUMENT, {
     variables: { id: documentId },
@@ -69,11 +76,15 @@ export default function WritePage() {
 
   const handleContentChange = async (newContent: string) => {
     setContent(newContent);
-    if (activeTab === "node" || selectedMarkdownNodeId === 'root') {
+    if (activeTab === "node" || selectedMarkdownNodeId === "root") {
       setFullContent(newContent);
     } else if (selectedMarkdownNodeId) {
       // 更新子节点内容
-      const updatedFullContent = updateNodeContent(fullContent, selectedMarkdownNodeId, newContent);
+      const updatedFullContent = updateNodeContent(
+        fullContent,
+        selectedMarkdownNodeId,
+        newContent
+      );
       setFullContent(updatedFullContent);
     }
     if (selectedNodeId) {
@@ -158,8 +169,12 @@ export default function WritePage() {
           </div>
         </div>
       </div>
-      <div className={`flex-1 flex flex-col overflow-hidden bg-forest-content`}>
-        <div className={`${leftCollapsed ? "w-full" : "w-3/5"} p-4 h-full`}>
+      <div
+        className={`flex-1 flex flex-col overflow-hidden bg-forest-content h-full w-full`}
+      >
+        <div
+          className={`${leftCollapsed ? "w-full" : "w-3/5"} p-4 h-full w-full`}
+        >
           <VditorEditor content={content} onChange={handleContentChange} />
         </div>
       </div>
@@ -179,13 +194,17 @@ export default function WritePage() {
 }
 
 // 辅助函数：更新节点内容
-function updateNodeContent(fullContent: string, nodeId: string, newContent: string): string {
-  const lines = fullContent.split('\n');
+function updateNodeContent(
+  fullContent: string,
+  nodeId: string,
+  newContent: string
+): string {
+  const lines = fullContent.split("\n");
   let inTargetNode = false;
   let targetDepth = 0;
   const updatedLines = lines.map((line, index) => {
-    if (line.startsWith('#')) {
-      const depth = line.split(' ')[0].length;
+    if (line.startsWith("#")) {
+      const depth = line.split(" ")[0].length;
       if (inTargetNode && depth <= targetDepth) {
         inTargetNode = false;
       }
@@ -196,11 +215,13 @@ function updateNodeContent(fullContent: string, nodeId: string, newContent: stri
       }
     }
     if (inTargetNode) {
-      return index === lines.findIndex(l => l.includes(`{#${nodeId}}`)) + 1 ? newContent : '';
+      return index === lines.findIndex((l) => l.includes(`{#${nodeId}}`)) + 1
+        ? newContent
+        : "";
     }
     return line;
   });
-  return updatedLines.filter(Boolean).join('\n');
+  return updatedLines.filter(Boolean).join("\n");
 }
 
 // 辅助函数：解析 Markdown 到 AST
@@ -213,10 +234,12 @@ const parseMarkdownToAST = (content: string): MarkdownNode[] => {
   let currentContent = "";
 
   visit(tree, (node: any) => {
-    if (node.type === 'heading') {
+    if (node.type === "heading") {
       const level = node.depth;
-      const headingContent = node.children.map((child: any) => child.value).join("");
-      
+      const headingContent = node.children
+        .map((child: any) => child.value)
+        .join("");
+
       if (currentNode !== root) {
         currentNode.content = currentContent.trim();
         currentContent = "";
@@ -239,11 +262,12 @@ const parseMarkdownToAST = (content: string): MarkdownNode[] => {
 
       currentNode = newNode;
     } else {
-      if (node.type === 'text') {
+      if (node.type === "text") {
         currentContent += node.value;
-      } else if (node.type === 'paragraph') {
-        currentContent += node.children.map((child: any) => child.value).join("") + "\n\n";
-      } else if (node.type === 'code') {
+      } else if (node.type === "paragraph") {
+        currentContent +=
+          node.children.map((child: any) => child.value).join("") + "\n\n";
+      } else if (node.type === "code") {
         currentContent += `\`\`\`${node.lang}\n${node.value}\n\`\`\`\n\n`;
       }
     }
