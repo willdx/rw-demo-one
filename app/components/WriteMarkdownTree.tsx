@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Controls,
@@ -160,6 +160,43 @@ const getLayoutedElements = (
   return { nodes, edges };
 };
 
+const updateEdgeStylesOnNodeClick = (
+  selectedNodeId: string,
+  nodes: Node[],
+  edges: Edge[]
+): Edge[] => {
+  const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+  if (!selectedNode) return edges;
+
+  const selectedNodeIds = new Set<string>();
+  const traverse = (nodeId: string) => {
+    selectedNodeIds.add(nodeId);
+    edges
+      .filter((edge) => edge.source === nodeId)
+      .forEach((edge) => traverse(edge.target));
+  };
+
+  const traverseToRoot = (nodeId: string) => {
+    selectedNodeIds.add(nodeId);
+    edges
+      .filter((edge) => edge.target === nodeId)
+      .forEach((edge) => traverseToRoot(edge.source));
+  };
+
+  traverseToRoot(selectedNodeId);
+  traverse(selectedNodeId);
+
+  return edges.map((edge) => ({
+    ...edge,
+    style:
+      selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+        ? { stroke: "#42b983", strokeWidth: 3 }
+        : { stroke: "#888", strokeWidth: 2 },
+    animated:
+      selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
+  }));
+};
+
 const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
   content,
   onNodeSelect,
@@ -168,6 +205,7 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView } = useReactFlow();
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
 
   const markdownNodes = useMemo(() => parseMarkdown(content), [content]);
 
@@ -175,20 +213,19 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
     (direction: "LR" | "TB") => {
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         getLayoutedElements(markdownNodes, direction);
-      setNodes(
-        layoutedNodes.map((node) => ({
-          ...node,
-          data: { ...node.data, isSelected: node.id === selectedNodeId },
-        }))
+      const updatedNodes = layoutedNodes.map((node) => ({
+        ...node,
+        data: { ...node.data, isSelected: node.id === selectedNodeId },
+      }));
+      setNodes(updatedNodes);
+      
+      const updatedEdges = updateEdgeStylesOnNodeClick(
+        selectedNodeId || updatedNodes[0].id,
+        updatedNodes,
+        layoutedEdges
       );
-      setEdges(
-        layoutedEdges.map((edge) => ({
-          ...edge,
-          type: "smoothstep",
-          animated: true,
-          style: { stroke: "#42b983", strokeWidth: 2 },
-        }))
-      );
+      setEdges(updatedEdges);
+      
       setTimeout(() => fitView({ padding: 0.2 }), 0);
     },
     [markdownNodes, selectedNodeId, setNodes, setEdges, fitView]
@@ -198,18 +235,24 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
     updateNodesAndEdges("LR");
   }, [updateNodesAndEdges]);
 
+  const onToggleLayout = useCallback(() => {
+    setLayout((prevLayout) => {
+      const newLayout = prevLayout === "horizontal" ? "vertical" : "horizontal";
+      updateNodesAndEdges(newLayout === "horizontal" ? "LR" : "TB");
+      return newLayout;
+    });
+  }, [updateNodesAndEdges]);
+
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       if (node.data) {
         onNodeSelect(node.id, node.data.content || "");
+        const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
+        setEdges(updatedEdges);
       }
     },
-    [onNodeSelect]
+    [onNodeSelect, nodes, edges, setEdges]
   );
-
-  const onToggleLayout = useCallback(() => {
-    updateNodesAndEdges(nodes[0]?.position.x === 0 ? "TB" : "LR");
-  }, [nodes, updateNodesAndEdges]);
 
   return (
     <ReactFlow
@@ -228,7 +271,7 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
         <ControlButton onClick={onToggleLayout} title="切换布局">
           <ViewColumnsIcon
             className={`w-4 h-4 ${
-              nodes[0]?.position.x === 0 ? "" : "transform rotate-90"
+              layout === "vertical" ? "transform rotate-90" : ""
             }`}
           />
         </ControlButton>

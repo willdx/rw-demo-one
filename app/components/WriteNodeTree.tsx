@@ -30,8 +30,6 @@ const NODE_HEIGHT = 40;
 const HORIZONTAL_GAP = 50;
 const VERTICAL_GAP = 20;
 
-// ... 保留 NodeTree.tsx 中的其他常量和接口定义
-
 const GET_DOCUMENTS = gql`
   query Documents(
     $where: DocumentWhere
@@ -80,8 +78,6 @@ const GET_DOCUMENTS = gql`
     }
   }
 `;
-
-// ... 保留 NodeTree.tsx 中的其他辅助函数
 
 // 添加 formatGraphData 函数
 const formatGraphData = (
@@ -175,7 +171,7 @@ const CustomNode: React.FC<{
   </>
 );
 
-// 添加 updateEdgeStylesOnNodeClick 函数
+// 更新 updateEdgeStylesOnNodeClick 函数
 const updateEdgeStylesOnNodeClick = (
   selectedNodeId: string,
   nodes: Node[],
@@ -207,11 +203,46 @@ const updateEdgeStylesOnNodeClick = (
     ...edge,
     style:
       selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
-        ? { stroke: "#42b983", strokeWidth: 3 }
-        : { stroke: "#888", strokeWidth: 2 },
+        ? { stroke: "#42b983", strokeWidth: 3 } // 选中状态样式
+        : { stroke: "#888", strokeWidth: 2 }, // 默认样式
     animated:
       selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
   }));
+};
+
+// 添加 getLayoutedElements 函数
+const getLayoutedElements = (
+  nodes: Node[],
+  edges: Edge[],
+  direction: "TB" | "LR" = "LR"
+): { nodes: Node[]; edges: Edge[] } => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({ rankdir: direction });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  return {
+    nodes: nodes.map((node) => {
+      const nodeWithPosition = dagreGraph.node(node.id);
+      return {
+        ...node,
+        position: {
+          x: nodeWithPosition.x - NODE_WIDTH / 2,
+          y: nodeWithPosition.y - NODE_HEIGHT / 2,
+        },
+      };
+    }),
+    edges,
+  };
 };
 
 const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
@@ -268,6 +299,30 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     [onNodeSelect, nodes, edges, setEdges]
   );
 
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
+
+  const updateLayout = useCallback((direction: "LR" | "TB") => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, direction);
+    setNodes(layoutedNodes);
+    
+    // 更新边的样式
+    const updatedEdges = updateEdgeStylesOnNodeClick(
+      layoutedNodes.find((node) => node.data.isSelected)?.id || layoutedNodes[0].id,
+      layoutedNodes,
+      layoutedEdges
+    );
+    
+    setEdges(updatedEdges);
+  }, [nodes, edges]);
+
+  const onToggleLayout = useCallback(() => {
+    setLayout((prevLayout) => {
+      const newLayout = prevLayout === "horizontal" ? "vertical" : "horizontal";
+      updateLayout(newLayout === "horizontal" ? "LR" : "TB");
+      return newLayout;
+    });
+  }, [updateLayout]);
+
   if (loading) return <TreeSkeleton />;
   if (error)
     return (
@@ -291,8 +346,8 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
       nodeTypes={{ customNode: CustomNode }}
     >
       <Controls>
-        <ControlButton onClick={() => fitView()} title="适应视图">
-          <ViewColumnsIcon className="w-4 h-4" />
+        <ControlButton onClick={onToggleLayout} title="切换布局">
+          <ViewColumnsIcon className={`w-4 h-4 ${layout === "vertical" ? "transform rotate-90" : ""}`} />
         </ControlButton>
       </Controls>
       <Background
