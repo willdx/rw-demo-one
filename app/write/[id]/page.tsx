@@ -111,12 +111,12 @@ export default function WritePage() {
     border-r border-forest-border relative overflow-hidden
   `;
 
-  if (!token) {
-    return <div>请先登录</div>;
-  }
+  // if (!token) {
+  //   return <div>请先登录</div>;
+  // }
 
-  if (loading) return <div>加载中...</div>;
-  if (error) return <div>错误: {error.message}</div>;
+  // if (loading) return <div>加载中...</div>;
+  // if (error) return <div>错误: {error.message}</div>;
 
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
@@ -172,9 +172,7 @@ export default function WritePage() {
       <div
         className={`flex-1 flex flex-col overflow-hidden bg-forest-content h-full w-full`}
       >
-        <div
-          className={`${leftCollapsed ? "w-full" : "w-3/5"} p-4 h-full w-full`}
-        >
+        <div className={`${leftCollapsed ? "w-full" : "w-3/5"} h-full w-full`}>
           <VditorEditor content={content} onChange={handleContentChange} />
         </div>
       </div>

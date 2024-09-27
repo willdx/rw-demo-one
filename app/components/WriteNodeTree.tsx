@@ -22,6 +22,7 @@ import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import dagre from "dagre";
 import { useQuery, gql } from "@apollo/client";
 import { useAuth } from "../contexts/AuthContext";
+import TreeSkeleton from "./TreeSkeleton";
 
 // 添加缺失的常量定义
 const NODE_WIDTH = 200;
@@ -233,7 +234,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     },
     context: {
       headers: {
-        authorization: token ? `Bearer ${token}` : '',
+        authorization: token ? `Bearer ${token}` : "",
       },
     },
     skip: !token,
@@ -267,16 +268,13 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     [onNodeSelect, nodes, edges, setEdges]
   );
 
-  if (!isAuthChecked) {
-    return <div>正在检查认证状态...</div>;
-  }
-
-  if (!token) {
-    return <div>请先登录</div>;
-  }
-
-  if (loading) return <div>加载中...</div>;
-  if (error) return <div>错误: {error.message}</div>;
+  if (loading) return <TreeSkeleton />;
+  if (error)
+    return (
+      <div className="alert alert-error">
+        <span>错误: {error.message}</span>
+      </div>
+    );
 
   return (
     <ReactFlow
