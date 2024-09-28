@@ -30,6 +30,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
   const [bgColor, setBgColor] = useState("#F7F7F7"); // 设置默认背景颜色
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 
@@ -48,6 +49,10 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
 
   const handleMarkdownTreeSelect = useCallback((content: string) => {
     setSelectedMarkdownContent(content);
+  }, []);
+
+  const handleNodeSelect = useCallback((nodeId: string) => {
+    setSelectedNodeId(nodeId);
   }, []);
 
   const handleTabClick = useCallback(
@@ -119,6 +124,8 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
                   content={markdownTreeContent}
                   onNodeClick={handleMarkdownTreeSelect}
                   selectedContent={selectedMarkdownContent}
+                  onNodeSelect={handleNodeSelect}
+                  updateTrigger={0} // 或者使用一个状态变量来触发更新
                 />
               )}
             </ReactFlowProvider>

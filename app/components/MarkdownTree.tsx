@@ -21,6 +21,7 @@ import dagre from "dagre";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import { visit } from "unist-util-visit";
+import remarkStringify from "remark-stringify";
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 40;
@@ -76,26 +77,44 @@ const CustomNode: React.FC<{
 );
 
 const parseMarkdownToAST = (content: string): MarkdownNode[] => {
-  const tree = unified().use(remarkParse).parse(content);
+  const processor = unified().use(remarkParse);
+  const tree = processor.parse(content);
+  const stringifier = unified().use(remarkStringify);
+
   const root: MarkdownNode = { id: "root", content: "", children: [] };
   const stack: MarkdownNode[] = [root];
 
-  visit(tree, "heading", (node: any) => {
-    const level = node.depth;
-    const content = node.children.map((child: any) => child.value).join("");
-    const newNode: MarkdownNode = {
-      id: `node-${Math.random().toString(36).substr(2, 9)}`,
-      content,
-      children: [],
-    };
+  let currentNode = root;
 
-    while (stack.length > level) {
-      stack.pop();
-    }
+  visit(tree, (node: any) => {
+    if (node.type === "heading") {
+      const level = node.depth;
+      const headingContent = stringifier.stringify(node).trim();
 
-    if (stack.length === level) {
-      stack[stack.length - 1].children.push(newNode);
-      stack.push(newNode);
+      const newNode: MarkdownNode = {
+        id: `node-${Math.random().toString(36).substr(2, 9)}`,
+        content: headingContent,
+        children: [],
+      };
+
+      while (stack.length > level) {
+        stack.pop();
+      }
+
+      if (stack.length === level) {
+        stack[stack.length - 1].children.push(newNode);
+        stack.push(newNode);
+      }
+
+      currentNode = newNode;
+    } else {
+      // 只在当前节点下添加内容,避免重复
+      if (stack.length > 1) {
+        const nodeContent = stringifier.stringify(node).trim();
+        if (!currentNode.content.includes(nodeContent)) {
+          currentNode.content += "\n" + nodeContent + "\n";
+        }
+      }
     }
   });
 
@@ -111,14 +130,15 @@ const formatMarkdownData = (
 
   const processNode = (node: MarkdownNode, depth: number = 0) => {
     const nodeId = node.id;
+    const nodeLabel = node.content.split("\n")[0]; // 只取第一行作为标签
     nodes.push({
       id: nodeId,
       type: "customNode",
       data: {
-        label: node.content,
+        label: nodeLabel.replace(/^#+\s*/, ""),
         content: node.content,
         isSelected: false,
-        depth, // 添加 depth 属性
+        depth,
       },
       position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
     });
@@ -132,7 +152,7 @@ const formatMarkdownData = (
         source: nodeId,
         target: childId,
         type: "smoothstep",
-        style: { stroke: "#42b983", strokeWidth: 3 }, // 加粗流线型线条
+        style: { stroke: "#42b983", strokeWidth: 3 },
         animated: true,
       });
       processNode(childNode, depth + 1);
