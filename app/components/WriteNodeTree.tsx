@@ -246,6 +246,28 @@ const getLayoutedElements = (
   };
 };
 
+// 添加深度优先遍历函数
+const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
+  const visited = new Set<string>();
+  const result: string[] = [];
+
+  const dfs = (nodeId: string) => {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+    result.push(nodeId);
+
+    edges
+      .filter((edge) => edge.source === nodeId)
+      .forEach((edge) => dfs(edge.target));
+  };
+
+  if (nodes.length > 0) {
+    dfs(nodes[0].id);
+  }
+
+  return result;
+};
+
 const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   onNodeSelect,
   documentId,
@@ -256,7 +278,9 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView } = useReactFlow();
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
+    "auto"
+  );
 
   // 使用 useRef 来存储最新的 nodes 和 edges
   const nodesRef = useRef(nodes);
@@ -299,13 +323,66 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     [setEdges]
   );
 
+  // 添加新的状态
+  const [dfsOrder, setDfsOrder] = useState<string[]>([]);
+  const [currentDfsIndex, setCurrentDfsIndex] = useState<number>(0);
+
+  // 在useEffect中计算深度优先遍历顺序
+  useEffect(() => {
+    if (nodes.length > 0 && edges.length > 0) {
+      const order = dfsTraversal(nodes, edges);
+      setDfsOrder(order);
+      setCurrentDfsIndex(order.findIndex((id) => id === selectedNodeId) || 0);
+    }
+  }, [nodes, edges, selectedNodeId]);
+
+  const updateNodesAndEdges = useCallback(
+    (newSelectedNodeId: string) => {
+      setNodes((nds) =>
+        nds.map((node) => ({
+          ...node,
+          data: { ...node.data, isSelected: node.id === newSelectedNodeId },
+        }))
+      );
+      setEdges((eds) => updateEdgeStylesOnNodeClick(newSelectedNodeId, nodes, eds));
+    },
+    [nodes, setNodes, setEdges]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = event.key === "ArrowLeft"
+            ? Math.max(prevIndex - 1, 0)
+            : Math.min(prevIndex + 1, dfsOrder.length - 1);
+          const nodeId = dfsOrder[newIndex];
+          const node = nodes.find((n) => n.id === nodeId);
+          if (node) {
+            onNodeSelect(node.id, node.data.content as string);
+            updateNodesAndEdges(node.id);
+          }
+          return newIndex;
+        });
+      }
+    },
+    [dfsOrder, nodes, onNodeSelect, updateNodesAndEdges]
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       onNodeSelect(node.id, node.data.content as string);
-      const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodesRef.current, edgesRef.current);
-      setEdges(updatedEdges);
+      updateNodesAndEdges(node.id);
+      setCurrentDfsIndex(dfsOrder.findIndex((id) => id === node.id));
     },
-    [onNodeSelect, setEdges]
+    [onNodeSelect, updateNodesAndEdges, dfsOrder]
   );
 
   const updateLayout = useCallback(
@@ -322,7 +399,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
       const updatedEdges = layoutedEdges.map((edge) => ({
         ...edge,
-        type: 'smoothstep',
+        type: "smoothstep",
         animated: true,
       }));
       setEdges(updatedEdges);
@@ -375,7 +452,12 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
           />
         </ControlButton>
       </Controls>
-      <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e0e0e0" />
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={12}
+        size={1}
+        color="#e0e0e0"
+      />
     </ReactFlow>
   );
 };

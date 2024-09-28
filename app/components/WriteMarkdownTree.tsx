@@ -204,6 +204,28 @@ const updateEdgeStylesOnNodeClick = (
   }));
 };
 
+// 添加深度优先遍历函数
+const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
+  const visited = new Set<string>();
+  const result: string[] = [];
+
+  const dfs = (nodeId: string) => {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+    result.push(nodeId);
+
+    edges
+      .filter((edge) => edge.source === nodeId)
+      .forEach((edge) => dfs(edge.target));
+  };
+
+  if (nodes.length > 0) {
+    dfs(nodes[0].id);
+  }
+
+  return result;
+};
+
 const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
   content,
   onNodeSelect,
@@ -253,15 +275,67 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
     });
   }, [updateNodesAndEdges]);
 
+  // 添加新的状态
+  const [dfsOrder, setDfsOrder] = useState<string[]>([]);
+  const [currentDfsIndex, setCurrentDfsIndex] = useState<number>(0);
+
+  // 在useEffect中计算深度优先遍历顺序
+  useEffect(() => {
+    if (nodes.length > 0 && edges.length > 0) {
+      const order = dfsTraversal(nodes, edges);
+      setDfsOrder(order);
+      setCurrentDfsIndex(
+        order.findIndex((id) => id === selectedNodeId) || 0
+      );
+    }
+  }, [nodes, edges, selectedNodeId]);
+
+  // 添加键盘事件处理函数
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.max(prevIndex - 1, 0);
+          const nodeId = dfsOrder[newIndex];
+          const node = nodes.find((n) => n.id === nodeId);
+          if (node) {
+            onNodeSelect(node.id, node.data.content as string);
+          }
+          return newIndex;
+        });
+      } else if (event.key === "ArrowRight") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
+          const nodeId = dfsOrder[newIndex];
+          const node = nodes.find((n) => n.id === nodeId);
+          if (node) {
+            onNodeSelect(node.id, node.data.content as string);
+          }
+          return newIndex;
+        });
+      }
+    },
+    [dfsOrder, nodes, onNodeSelect]
+  );
+
+  // 添加和移除键盘事件监听器
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       if (node.data) {
         onNodeSelect(node.id, node.data.content || "");
         const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
         setEdges(updatedEdges);
+        setCurrentDfsIndex(dfsOrder.findIndex((id) => id === node.id));
       }
     },
-    [onNodeSelect, nodes, edges, setEdges]
+    [onNodeSelect, nodes, edges, setEdges, updateEdgeStylesOnNodeClick, dfsOrder]
   );
 
   return (
