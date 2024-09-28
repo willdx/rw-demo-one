@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
+import { debounce } from "lodash";
 import {
   ReactFlow,
   Controls,
   Background,
   useNodesState,
   useEdgesState,
-  BackgroundVariant,
   Handle,
   Position,
   ControlButton,
@@ -16,6 +16,7 @@ import {
   Edge,
   Connection,
   addEdge,
+  BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
@@ -24,7 +25,7 @@ import { useQuery, gql } from "@apollo/client";
 import { useAuth } from "../contexts/AuthContext";
 import TreeSkeleton from "./TreeSkeleton";
 
-// 添加缺失的常量定义
+// 常量定义
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 40;
 const HORIZONTAL_GAP = 50;
@@ -79,9 +80,10 @@ const GET_DOCUMENTS = gql`
   }
 `;
 
-// 添加 formatGraphData 函数
+// 格式化图形数据
 const formatGraphData = (
-  document: DocumentNode
+  document: DocumentNode,
+  layout: "LR" | "TB"
 ): { nodes: Node[]; edges: Edge[] } => {
   if (!document) return { nodes: [], edges: [] };
 
@@ -97,36 +99,31 @@ const formatGraphData = (
       data: {
         label: node.fileName,
         content: node.content,
-        depth: depth,
+        depth,
         isSelected: false,
+        layout,
       },
       position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
-      style: {
-        width: NODE_WIDTH,
-      },
+      style: { width: NODE_WIDTH },
     });
 
     yOffset += NODE_HEIGHT + VERTICAL_GAP;
 
-    if (node.childrenConnection) {
-      node.childrenConnection.edges.forEach((edge) => {
-        const childNode = edge.node;
-        const childId = childNode.id;
-        edges.push({
-          id: `e${nodeId}-${childId}`,
-          source: nodeId,
-          target: childId,
-          type: "smoothstep",
-          style: { stroke: "#42b983", strokeWidth: 3 },
-          animated: true,
-        });
-        processNode(childNode, depth + 1);
+    node.childrenConnection?.edges.forEach((edge) => {
+      const childNode = edge.node;
+      edges.push({
+        id: `e${nodeId}-${childNode.id}`,
+        source: nodeId,
+        target: childNode.id,
+        type: "smoothstep",
+        style: { stroke: "#42b983", strokeWidth: 3 },
+        animated: true,
       });
-    }
+      processNode(childNode, depth + 1);
+    });
   };
 
   processNode(document);
-
   return { nodes, edges };
 };
 
@@ -136,9 +133,14 @@ interface WriteNodeTreeProps {
   selectedNodeId: string | null;
 }
 
-// 添加 CustomNode 组件
+// 自定义节点组件
 const CustomNode: React.FC<{
-  data: { label: string; depth: number; isSelected: boolean };
+  data: {
+    label: string;
+    depth: number;
+    isSelected: boolean;
+    layout: "LR" | "TB";
+  };
 }> = ({ data }) => (
   <>
     <div
@@ -160,18 +162,18 @@ const CustomNode: React.FC<{
     </div>
     <Handle
       type="target"
-      position={Position.Left}
-      className="w-3 h-3 -left-1.5 bg-forest-accent"
+      position={data.layout === "LR" ? Position.Left : Position.Top}
+      className="w-3 h-3 bg-forest-accent"
     />
     <Handle
       type="source"
-      position={Position.Right}
-      className="w-3 h-3 -right-1.5 bg-forest-accent"
+      position={data.layout === "LR" ? Position.Right : Position.Bottom}
+      className="w-3 h-3 bg-forest-accent"
     />
   </>
 );
 
-// 更新 updateEdgeStylesOnNodeClick 函数
+// 更新边样式
 const updateEdgeStylesOnNodeClick = (
   selectedNodeId: string,
   nodes: Node[],
@@ -188,7 +190,6 @@ const updateEdgeStylesOnNodeClick = (
       .forEach((edge) => traverse(edge.target));
   };
 
-  // Traverse from root to selected node
   const traverseToRoot = (nodeId: string) => {
     selectedNodeIds.add(nodeId);
     edges
@@ -203,14 +204,14 @@ const updateEdgeStylesOnNodeClick = (
     ...edge,
     style:
       selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
-        ? { stroke: "#42b983", strokeWidth: 3 } // 选中状态样式
-        : { stroke: "#888", strokeWidth: 2 }, // 默认样式
+        ? { stroke: "#42b983", strokeWidth: 3 }
+        : { stroke: "#888", strokeWidth: 2 },
     animated:
       selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
   }));
 };
 
-// 添加 getLayoutedElements 函数
+// 获取布局元素
 const getLayoutedElements = (
   nodes: Node[],
   edges: Edge[],
@@ -252,11 +253,19 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 }) => {
   const { token } = useAuth();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
-
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
   const { fitView } = useReactFlow();
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
+
+  // 使用 useRef 来存储最新的 nodes 和 edges
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+  }, [nodes, edges]);
 
   const { loading, error, data } = useQuery(GET_DOCUMENTS, {
     variables: {
@@ -278,8 +287,8 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   }, [token]);
 
   useEffect(() => {
-    if (data && data.documents && data.documents.length > 0) {
-      const formattedData = formatGraphData(data.documents[0]);
+    if (data?.documents?.length) {
+      const formattedData = formatGraphData(data.documents[0], "LR");
       setNodes(formattedData.nodes);
       setEdges(formattedData.edges);
     }
@@ -293,35 +302,47 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       onNodeSelect(node.id, node.data.content as string);
-      const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
+      const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodesRef.current, edgesRef.current);
       setEdges(updatedEdges);
     },
-    [onNodeSelect, nodes, edges, setEdges]
+    [onNodeSelect, setEdges]
   );
 
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
+  const updateLayout = useCallback(
+    (direction: "LR" | "TB") => {
+      const { nodes: layoutedNodes, edges: layoutedEdges } =
+        getLayoutedElements(nodesRef.current, edgesRef.current, direction);
+      const updatedNodes = layoutedNodes.map((node) => ({
+        ...node,
+        data: { ...node.data, layout: direction },
+        sourcePosition: direction === "LR" ? Position.Right : Position.Bottom,
+        targetPosition: direction === "LR" ? Position.Left : Position.Top,
+      }));
+      setNodes(updatedNodes);
 
-  const updateLayout = useCallback((direction: "LR" | "TB") => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, direction);
-    setNodes(layoutedNodes);
-    
-    // 更新边的样式
-    const updatedEdges = updateEdgeStylesOnNodeClick(
-      layoutedNodes.find((node) => node.data.isSelected)?.id || layoutedNodes[0].id,
-      layoutedNodes,
-      layoutedEdges
-    );
-    
-    setEdges(updatedEdges);
-  }, [nodes, edges]);
+      const updatedEdges = layoutedEdges.map((edge) => ({
+        ...edge,
+        type: 'smoothstep',
+        animated: true,
+      }));
+      setEdges(updatedEdges);
 
-  const onToggleLayout = useCallback(() => {
-    setLayout((prevLayout) => {
-      const newLayout = prevLayout === "horizontal" ? "vertical" : "horizontal";
-      updateLayout(newLayout === "horizontal" ? "LR" : "TB");
-      return newLayout;
-    });
-  }, [updateLayout]);
+      setTimeout(() => fitView(), 0);
+    },
+    [setNodes, setEdges, fitView]
+  );
+
+  const onToggleLayout = useCallback(
+    debounce(() => {
+      setLayout((prevLayout) => {
+        const newLayout =
+          prevLayout === "horizontal" ? "vertical" : "horizontal";
+        updateLayout(newLayout === "horizontal" ? "LR" : "TB");
+        return newLayout;
+      });
+    }, 300),
+    [updateLayout]
+  );
 
   if (loading) return <TreeSkeleton />;
   if (error)
@@ -347,15 +368,14 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     >
       <Controls>
         <ControlButton onClick={onToggleLayout} title="切换布局">
-          <ViewColumnsIcon className={`w-4 h-4 ${layout === "vertical" ? "transform rotate-90" : ""}`} />
+          <ViewColumnsIcon
+            className={`w-4 h-4 ${
+              layout === "vertical" ? "transform rotate-90" : ""
+            }`}
+          />
         </ControlButton>
       </Controls>
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={12}
-        size={1}
-        color="#e0e0e0"
-      />
+      <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e0e0e0" />
     </ReactFlow>
   );
 };
