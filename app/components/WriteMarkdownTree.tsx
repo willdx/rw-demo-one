@@ -141,6 +141,9 @@ const getLayoutedElements = (
         id: `${node.id}-${child.id}`,
         source: node.id,
         target: child.id,
+        type: "smoothstep",
+        style: { stroke: "#42b983", strokeWidth: 3 },
+        animated: true,
       });
     });
   };
@@ -205,7 +208,9 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView } = useReactFlow();
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
+    "auto"
+  );
 
   const markdownNodes = useMemo(() => parseMarkdown(content), [content]);
 
@@ -218,14 +223,14 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
         data: { ...node.data, isSelected: node.id === selectedNodeId },
       }));
       setNodes(updatedNodes);
-      
+
       const updatedEdges = updateEdgeStylesOnNodeClick(
         selectedNodeId || updatedNodes[0].id,
         updatedNodes,
         layoutedEdges
       );
       setEdges(updatedEdges);
-      
+
       setTimeout(() => fitView({ padding: 0.2 }), 0);
     },
     [markdownNodes, selectedNodeId, setNodes, setEdges, fitView]
