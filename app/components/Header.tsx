@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LoginModal from "./LoginModal";
 import RegisterModal from "./RegisterModal";
 import UserMenu from "./UserMenu";
@@ -11,7 +11,14 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Header({ showAlert }: { showAlert: (message: string) => void }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsAuthReady(true);
+    }
+  }, [isLoading]);
 
   const handleLoginSuccess = () => {
     setIsLoginModalOpen(false);
@@ -48,7 +55,9 @@ export default function Header({ showAlert }: { showAlert: (message: string) => 
             知识库
           </Link>
           <div className="divider divider-horizontal" />
-          {user ? (
+          {!isAuthReady ? (
+            <div className="w-24 h-10 bg-base-200 animate-pulse rounded"></div>
+          ) : user ? (
             <UserMenu onLogout={handleLogout} />
           ) : (
             <div className="flex items-center space-x-4">
