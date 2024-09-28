@@ -39,7 +39,7 @@ interface WriteMarkdownTreeProps {
 }
 
 const CustomNode: React.FC<{
-  data: { label: string; isSelected: boolean; depth: number };
+  data: { label: string; isSelected: boolean; depth: number; layout: "LR" | "TB" };
 }> = ({ data }) => (
   <div
     className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
@@ -53,13 +53,17 @@ const CustomNode: React.FC<{
     <span className="text-sm font-medium">{data.label}</span>
     <Handle
       type="target"
-      position={Position.Left}
-      className="w-3 h-3 -left-1.5 bg-forest-accent"
+      position={data.layout === "LR" ? Position.Left : Position.Top}
+      className={`w-3 h-3 bg-forest-accent ${
+        data.layout === "LR" ? "-left-1.5" : "-top-1.5"
+      }`}
     />
     <Handle
       type="source"
-      position={Position.Right}
-      className="w-3 h-3 -right-1.5 bg-forest-accent"
+      position={data.layout === "LR" ? Position.Right : Position.Bottom}
+      className={`w-3 h-3 bg-forest-accent ${
+        data.layout === "LR" ? "-right-1.5" : "-bottom-1.5"
+      }`}
     />
   </div>
 );
@@ -220,7 +224,7 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
         getLayoutedElements(markdownNodes, direction);
       const updatedNodes = layoutedNodes.map((node) => ({
         ...node,
-        data: { ...node.data, isSelected: node.id === selectedNodeId },
+        data: { ...node.data, isSelected: node.id === selectedNodeId, layout: direction },
       }));
       setNodes(updatedNodes);
 
@@ -237,13 +241,14 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
   );
 
   useEffect(() => {
-    updateNodesAndEdges("LR");
+    updateNodesAndEdges("LR"); // 确保初始布局为 LR
   }, [updateNodesAndEdges]);
 
   const onToggleLayout = useCallback(() => {
     setLayout((prevLayout) => {
       const newLayout = prevLayout === "horizontal" ? "vertical" : "horizontal";
-      updateNodesAndEdges(newLayout === "horizontal" ? "LR" : "TB");
+      const direction = newLayout === "horizontal" ? "LR" : "TB";
+      updateNodesAndEdges(direction);
       return newLayout;
     });
   }, [updateNodesAndEdges]);
