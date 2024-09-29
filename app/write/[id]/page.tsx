@@ -15,10 +15,11 @@ import {
   BookOpenIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
+import debounce from "lodash/debounce";
 
 export default function WritePage() {
   const params = useParams();
-  const documentId = params.id as string;
+  const documentId = params?.id as string;
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState("");
@@ -31,7 +32,7 @@ export default function WritePage() {
     string | null
   >(null);
 
-  const { data, loading, error } = useQuery(GET_DOCUMENT, {
+  const { data } = useQuery(GET_DOCUMENT, {
     variables: { id: documentId },
     skip: !documentId || !token,
     context: {
@@ -54,7 +55,7 @@ export default function WritePage() {
       const docContent = data.documents[0].content;
       setFullContent(docContent);
       setContent(docContent);
-      setFileName(data.documents[0].fileName);
+      setFileName(extractFileName(docContent));
       setSelectedNodeId(data.documents[0].id);
     }
   }, [data]);
@@ -69,38 +70,47 @@ export default function WritePage() {
   };
 
   const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
-    console.log("Markdown node selected:", nodeId, nodeContent); // 添加日志
     setSelectedMarkdownNodeId(nodeId);
     setContent(nodeContent);
   };
 
-  const handleContentChange = async (newContent: string) => {
+  const debouncedUpdateDocument = useCallback(
+    debounce(async (updatedFullContent: string, updatedFileName: string) => {
+      if (documentId) {
+        await updateDocument({
+          variables: {
+            where: { id: documentId },
+            update: { content: updatedFullContent, fileName: updatedFileName },
+          },
+        });
+      }
+    }, 2000),
+    [documentId, updateDocument]
+  );
+
+  const handleContentChange = (newContent: string) => {
     setContent(newContent);
-    if (activeTab === "node" || selectedMarkdownNodeId === "root") {
-      setFullContent(newContent);
-    } else if (selectedMarkdownNodeId) {
-      // 更新子节点内容
-      const updatedFullContent = updateNodeContent(
-        fullContent,
+
+    let updatedFullContent = newContent;
+
+    if (
+      activeTab === "markdown" &&
+      selectedMarkdownNodeId &&
+      selectedMarkdownNodeId !== "root"
+    ) {
+      const updatedNodes = updateNodeInTree(
+        parseMarkdownToAST(fullContent),
         selectedMarkdownNodeId,
         newContent
       );
-      setFullContent(updatedFullContent);
+      updatedFullContent = rebuildMarkdownContent(updatedNodes);
     }
-    if (selectedNodeId) {
-      try {
-        await updateDocument({
-          variables: {
-            where: { id: selectedNodeId },
-            update: {
-              content: activeTab === "node" ? newContent : fullContent,
-            },
-          },
-        });
-      } catch (error) {
-        console.error("更新内容时出错:", error);
-      }
-    }
+
+    setFullContent(updatedFullContent);
+    const updatedFileName = extractFileName(updatedFullContent);
+    setFileName(updatedFileName);
+
+    debouncedUpdateDocument(updatedFullContent, updatedFileName);
   };
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
@@ -110,13 +120,6 @@ export default function WritePage() {
     ${collapsed ? "w-0" : "w-2/5"}
     border-r border-forest-border relative overflow-hidden
   `;
-
-  // if (!token) {
-  //   return <div>请先登录</div>;
-  // }
-
-  // if (loading) return <div>加载中...</div>;
-  // if (error) return <div>错误: {error.message}</div>;
 
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
@@ -190,6 +193,17 @@ export default function WritePage() {
     </div>
   );
 }
+
+// 辅助函数：提取文件名（第一个一级标题）
+const extractFileName = (content: string): string => {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    if (line.startsWith('# ')) {
+      return line.substring(2).trim();
+    }
+  }
+  return '未命名文档';
+};
 
 // 辅助函数：更新节点内容
 function updateNodeContent(
@@ -276,4 +290,34 @@ const parseMarkdownToAST = (content: string): MarkdownNode[] => {
   }
 
   return root.children;
+};
+
+// 添加一个函数来将 Markdown 子树还原为完整文本
+const rebuildMarkdownContent = (nodes: MarkdownNode[]): string => {
+  return nodes
+    .map((node) => {
+      const childrenContent = rebuildMarkdownContent(node.children);
+      return `${"#".repeat(node.depth)} ${node.content}\n\n${childrenContent}`;
+    })
+    .join("\n");
+};
+
+// 辅助函数：在树中更新指定节点的内容
+const updateNodeInTree = (
+  nodes: MarkdownNode[],
+  nodeId: string,
+  newContent: string
+): MarkdownNode[] => {
+  return nodes.map((node) => {
+    if (node.id === nodeId) {
+      return { ...node, content: newContent };
+    }
+    if (node.children.length > 0) {
+      return {
+        ...node,
+        children: updateNodeInTree(node.children, nodeId, newContent),
+      };
+    }
+    return node;
+  });
 };
