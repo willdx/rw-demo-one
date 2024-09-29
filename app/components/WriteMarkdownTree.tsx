@@ -231,8 +231,8 @@ const WriteMarkdownTree: React.FC<WriteMarkdownTreeProps> = ({
   onNodeSelect,
   selectedNodeId,
 }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView } = useReactFlow();
   const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
     "auto"

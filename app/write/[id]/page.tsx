@@ -16,6 +16,16 @@ import {
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import { visit } from 'unist-util-visit';
+
+interface MarkdownNode {
+  id: string;
+  content: string;
+  children: MarkdownNode[];
+  depth: number;
+}
 
 export default function WritePage() {
   const params = useParams();
@@ -28,9 +38,8 @@ export default function WritePage() {
   const { token } = useAuth();
 
   const [fullContent, setFullContent] = useState("");
-  const [selectedMarkdownNodeId, setSelectedMarkdownNodeId] = useState<
-    string | null
-  >(null);
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
+  const [selectedMarkdownNodeId, setSelectedMarkdownNodeId] = useState<string | null>(null);
 
   const { data } = useQuery(GET_DOCUMENT, {
     variables: { id: documentId },
@@ -63,51 +72,56 @@ export default function WritePage() {
   const handleNodeSelect = (nodeId: string, nodeContent: string) => {
     setSelectedNodeId(nodeId);
     setContent(nodeContent);
-    if (activeTab === "node") {
-      setFullContent(nodeContent);
-    }
+    setFullContent(nodeContent);
+    setSelectedChapterId(null); // 重置 selectedChapterId
     setSelectedMarkdownNodeId(null);
   };
 
   const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
-    setSelectedMarkdownNodeId(nodeId);
+    setSelectedChapterId(nodeId);
     setContent(nodeContent);
+    setSelectedMarkdownNodeId(nodeId);
   };
 
   const debouncedUpdateDocument = useCallback(
     debounce(async (updatedFullContent: string, updatedFileName: string) => {
       if (documentId) {
-        await updateDocument({
-          variables: {
-            where: { id: documentId },
-            update: { content: updatedFullContent, fileName: updatedFileName },
-          },
-        });
+        try {
+          await updateDocument({
+            variables: {
+              where: { id: documentId },
+              update: { content: updatedFullContent, fileName: updatedFileName },
+            },
+          });
+        } catch (error) {
+          console.error("Error updating document:", error);
+        }
       }
     }, 2000),
     [documentId, updateDocument]
   );
 
   const handleContentChange = (newContent: string) => {
-    setContent(newContent);
+    let updatedFullContent = fullContent;
+    let updatedFileName = fileName;
 
-    let updatedFullContent = newContent;
-
-    if (
-      activeTab === "markdown" &&
-      selectedMarkdownNodeId &&
-      selectedMarkdownNodeId !== "root"
-    ) {
+    if (selectedChapterId && selectedChapterId !== "root") {
+      // 更新章节内容
       const updatedNodes = updateNodeInTree(
         parseMarkdownToAST(fullContent),
-        selectedMarkdownNodeId,
+        selectedChapterId,
         newContent
       );
       updatedFullContent = rebuildMarkdownContent(updatedNodes);
+      setContent(newContent); // 更新当前编辑的内容
+    } else {
+      // 更新整个文档内容
+      updatedFullContent = newContent;
+      setContent(newContent);
     }
 
     setFullContent(updatedFullContent);
-    const updatedFileName = extractFileName(updatedFullContent);
+    updatedFileName = extractFileName(updatedFullContent);
     setFileName(updatedFileName);
 
     debouncedUpdateDocument(updatedFullContent, updatedFileName);

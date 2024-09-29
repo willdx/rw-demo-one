@@ -80,6 +80,17 @@ const GET_DOCUMENTS = gql`
   }
 `;
 
+interface DocumentNode {
+  id: string;
+  fileName: string;
+  content: string;
+  childrenConnection?: {
+    edges: Array<{
+      node: DocumentNode;
+    }>;
+  };
+}
+
 // 格式化图形数据
 const formatGraphData = (
   document: DocumentNode,
@@ -275,8 +286,8 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 }) => {
   const { token } = useAuth();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView } = useReactFlow();
   const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
     "auto"
