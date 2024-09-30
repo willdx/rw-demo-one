@@ -25,6 +25,7 @@
     "@types/dagre": "^0.7.52",
     "@types/mdx": "^2.0.13",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/uuid": "^10.0.0",
     "@xyflow/react": "^12.3.0",
     "bcrypt": "^5.1.1",
     "dagre": "^0.8.5",

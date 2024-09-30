@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_DOCUMENT, UPDATE_DOCUMENT } from "../../graphql/queries";
 import WriteNodeTree from "../../components/WriteNodeTree";
-import WriteMarkdownTree from "../../components/WriteMarkdownTree";
+import WriteMarkdownTree, {
+  WriteMarkdownTreeRef,
+} from "../../components/WriteMarkdownTree";
 import VditorEditor from "../../components/VditorEditor";
 import { useParams } from "next/navigation";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -16,16 +18,11 @@ import {
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import { visit } from 'unist-util-visit';
-
-interface MarkdownNode {
-  id: string;
-  content: string;
-  children: MarkdownNode[];
-  depth: number;
-}
+import {
+  parseMarkdown,
+  MarkdownNode,
+  replaceNodeContent,
+} from "../../utils/markdownUtils";
 
 export default function WritePage() {
   const params = useParams();
@@ -38,8 +35,12 @@ export default function WritePage() {
   const { token } = useAuth();
 
   const [fullContent, setFullContent] = useState("");
-  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
-  const [selectedMarkdownNodeId, setSelectedMarkdownNodeId] = useState<string | null>(null);
+  const fullContentRef = useRef("");
+  const parsedContentRef = useRef<MarkdownNode[]>([]);
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
+    null
+  );
+  const writeMarkdownTreeRef = useRef<WriteMarkdownTreeRef>(null);
 
   const { data } = useQuery(GET_DOCUMENT, {
     variables: { id: documentId },
@@ -63,24 +64,27 @@ export default function WritePage() {
     if (data && data.documents && data.documents.length > 0) {
       const docContent = data.documents[0].content;
       setFullContent(docContent);
+      fullContentRef.current = docContent;
       setContent(docContent);
       setFileName(extractFileName(docContent));
       setSelectedNodeId(data.documents[0].id);
     }
   }, [data]);
 
+  useEffect(() => {
+    fullContentRef.current = fullContent;
+  }, [fullContent]);
+
   const handleNodeSelect = (nodeId: string, nodeContent: string) => {
     setSelectedNodeId(nodeId);
     setContent(nodeContent);
     setFullContent(nodeContent);
     setSelectedChapterId(null); // 重置 selectedChapterId
-    setSelectedMarkdownNodeId(null);
   };
 
   const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
     setSelectedChapterId(nodeId);
     setContent(nodeContent);
-    setSelectedMarkdownNodeId(nodeId);
   };
 
   const debouncedUpdateDocument = useCallback(
@@ -90,7 +94,10 @@ export default function WritePage() {
           await updateDocument({
             variables: {
               where: { id: documentId },
-              update: { content: updatedFullContent, fileName: updatedFileName },
+              update: {
+                content: updatedFullContent,
+                fileName: updatedFileName,
+              },
             },
           });
         } catch (error) {
@@ -101,29 +108,41 @@ export default function WritePage() {
     [documentId, updateDocument]
   );
 
-  const handleContentChange = (newContent: string) => {
-    let updatedFullContent = fullContent;
+  const handleContentChange = (
+    newContent: string,
+    chapterId: string | null
+  ) => {
+    console.log(
+      `handleContentChange 被调用，chapterId: ${chapterId}, 新内容长度: ${newContent.length}`
+    );
+
+    let updatedFullContent = fullContentRef.current;
     let updatedFileName = fileName;
 
-    if (selectedChapterId && selectedChapterId !== "root") {
-      // 更新章节内容
-      const updatedNodes = updateNodeInTree(
-        parseMarkdownToAST(fullContent),
-        selectedChapterId,
+    if (chapterId && chapterId !== "root") {
+      console.log(`更新章节内容，章节ID: ${chapterId}`);
+      console.log("原始全文内容:", updatedFullContent);
+      const parsedMarkdown =
+        writeMarkdownTreeRef.current?.getParsedMarkdown() || [];
+      console.log("####parsedMarkdown:", parsedMarkdown);
+      updatedFullContent = replaceNodeContent(
+        updatedFullContent,
+        parsedMarkdown,
+        chapterId,
         newContent
       );
-      updatedFullContent = rebuildMarkdownContent(updatedNodes);
-      setContent(newContent); // 更新当前编辑的内容
+      console.log("更新后的全文内容:", updatedFullContent);
     } else {
-      // 更新整个文档内容
+      console.log("更新整个文档内容");
       updatedFullContent = newContent;
-      setContent(newContent);
     }
 
     setFullContent(updatedFullContent);
     updatedFileName = extractFileName(updatedFullContent);
-    setFileName(updatedFileName);
 
+    console.log(
+      `准备更新文档，文件名: ${updatedFileName}, 内容长度: ${updatedFullContent.length}`
+    );
     debouncedUpdateDocument(updatedFullContent, updatedFileName);
   };
 
@@ -177,9 +196,10 @@ export default function WritePage() {
                 />
               ) : (
                 <WriteMarkdownTree
+                  ref={writeMarkdownTreeRef}
                   content={fullContent}
                   onNodeSelect={handleMarkdownNodeSelect}
-                  selectedNodeId={selectedMarkdownNodeId}
+                  selectedNodeId={selectedChapterId}
                 />
               )}
             </ReactFlowProvider>
@@ -190,7 +210,11 @@ export default function WritePage() {
         className={`flex-1 flex flex-col overflow-hidden bg-forest-content h-full w-full`}
       >
         <div className={`${leftCollapsed ? "w-full" : "w-3/5"} h-full w-full`}>
-          <VditorEditor content={content} onChange={handleContentChange} />
+          <VditorEditor
+            content={content}
+            onChange={handleContentChange}
+            selectedChapterId={selectedChapterId}
+          />
         </div>
       </div>
 
@@ -210,128 +234,11 @@ export default function WritePage() {
 
 // 辅助函数：提取文件名（第一个一级标题）
 const extractFileName = (content: string): string => {
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   for (const line of lines) {
-    if (line.startsWith('# ')) {
+    if (line.startsWith("# ")) {
       return line.substring(2).trim();
     }
   }
-  return '未命名文档';
-};
-
-// 辅助函数：更新节点内容
-function updateNodeContent(
-  fullContent: string,
-  nodeId: string,
-  newContent: string
-): string {
-  const lines = fullContent.split("\n");
-  let inTargetNode = false;
-  let targetDepth = 0;
-  const updatedLines = lines.map((line, index) => {
-    if (line.startsWith("#")) {
-      const depth = line.split(" ")[0].length;
-      if (inTargetNode && depth <= targetDepth) {
-        inTargetNode = false;
-      }
-      if (line.includes(`{#${nodeId}}`)) {
-        inTargetNode = true;
-        targetDepth = depth;
-        return line;
-      }
-    }
-    if (inTargetNode) {
-      return index === lines.findIndex((l) => l.includes(`{#${nodeId}}`)) + 1
-        ? newContent
-        : "";
-    }
-    return line;
-  });
-  return updatedLines.filter(Boolean).join("\n");
-}
-
-// 辅助函数：解析 Markdown 到 AST
-const parseMarkdownToAST = (content: string): MarkdownNode[] => {
-  const tree = unified().use(remarkParse).parse(content);
-  const root: MarkdownNode = { id: "root", content: "", children: [] };
-  const stack: MarkdownNode[] = [root];
-
-  let currentNode = root;
-  let currentContent = "";
-
-  visit(tree, (node: any) => {
-    if (node.type === "heading") {
-      const level = node.depth;
-      const headingContent = node.children
-        .map((child: any) => child.value)
-        .join("");
-
-      if (currentNode !== root) {
-        currentNode.content = currentContent.trim();
-        currentContent = "";
-      }
-
-      const newNode: MarkdownNode = {
-        id: `node-${Math.random().toString(36).substr(2, 9)}`,
-        content: headingContent,
-        children: [],
-      };
-
-      while (stack.length > level) {
-        stack.pop();
-      }
-
-      if (stack.length === level) {
-        stack[stack.length - 1].children.push(newNode);
-        stack.push(newNode);
-      }
-
-      currentNode = newNode;
-    } else {
-      if (node.type === "text") {
-        currentContent += node.value;
-      } else if (node.type === "paragraph") {
-        currentContent +=
-          node.children.map((child: any) => child.value).join("") + "\n\n";
-      } else if (node.type === "code") {
-        currentContent += `\`\`\`${node.lang}\n${node.value}\n\`\`\`\n\n`;
-      }
-    }
-  });
-
-  if (currentNode !== root) {
-    currentNode.content = currentContent.trim();
-  }
-
-  return root.children;
-};
-
-// 添加一个函数来将 Markdown 子树还原为完整文本
-const rebuildMarkdownContent = (nodes: MarkdownNode[]): string => {
-  return nodes
-    .map((node) => {
-      const childrenContent = rebuildMarkdownContent(node.children);
-      return `${"#".repeat(node.depth)} ${node.content}\n\n${childrenContent}`;
-    })
-    .join("\n");
-};
-
-// 辅助函数：在树中更新指定节点的内容
-const updateNodeInTree = (
-  nodes: MarkdownNode[],
-  nodeId: string,
-  newContent: string
-): MarkdownNode[] => {
-  return nodes.map((node) => {
-    if (node.id === nodeId) {
-      return { ...node, content: newContent };
-    }
-    if (node.children.length > 0) {
-      return {
-        ...node,
-        children: updateNodeInTree(node.children, nodeId, newContent),
-      };
-    }
-    return node;
-  });
+  return "未命名文档";
 };
