@@ -96,7 +96,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
               onClick={() => handleTabClick("node")}
             >
               <BookOpenIcon className="w-5 h-5 mr-2 inline-block" />
-              Book
+              Aritcle
             </button>
             <button
               className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
@@ -107,7 +107,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
               onClick={() => handleTabClick("markdown")}
             >
               <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
-              Article
+              Chapter
             </button>
           </div>
           <div className="flex-grow overflow-hidden p-2">
