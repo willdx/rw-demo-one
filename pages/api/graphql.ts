@@ -46,6 +46,7 @@ const typeDefs = gql`
     createdAt: DateTime! @timestamp(operations: [CREATE])
     updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
     deletedAt: DateTime
+    isPublished: Boolean! @default(value: false)
     children: [Document!]!
       @relationship(type: "HAS_CHILD", direction: OUT, properties: "ChildOrder")
     parent: Document @relationship(type: "HAS_CHILD", direction: IN)
