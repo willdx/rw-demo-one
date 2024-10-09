@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_DOCUMENT, UPDATE_DOCUMENT } from "../../graphql/queries";
-import { PUBLISH_DOCUMENT } from "../../graphql/mutations";
+import { PUBLISH_DOCUMENT, UNPUBLISH_DOCUMENT } from "../../graphql/mutations";
 import WriteNodeTree from "../../components/WriteNodeTree";
 import WriteMarkdownTree, {
   WriteMarkdownTreeRef,
@@ -69,6 +69,14 @@ export default function WritePage() {
     },
   });
 
+  const [unpublishDocument] = useMutation(UNPUBLISH_DOCUMENT, {
+    context: {
+      headers: {
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    },
+  });
+
   useEffect(() => {
     if (data && data.documents && data.documents.length > 0) {
       const docContent = data.documents[0].content;
@@ -77,18 +85,22 @@ export default function WritePage() {
       setContent(docContent);
       setFileName(extractFileName(docContent));
       setSelectedNodeId(data.documents[0].id);
+      setIsPublished(data.documents[0].isPublished); // 更新发布状态
     }
   }, [data]);
 
-  useEffect(() => {
-    fullContentRef.current = fullContent;
-  }, [fullContent]);
+  const [isPublished, setIsPublished] = useState(false); // 添加状态管理
 
-  const handleNodeSelect = (nodeId: string, nodeContent: string) => {
-    setSelectedNodeId(nodeId);
-    setContent(nodeContent);
-    setFullContent(nodeContent);
+  const onNodeSelect = (node: DocumentNode) => {
+    console.log(`onNodeSelect 被调用，selectedNode: ${JSON.stringify(node)}`);
+    setSelectedNodeId(node.id);
+    setContent(node.data.content);
+    setFullContent(node.data.content);
     setSelectedChapterId(null); // 重置 selectedChapterId
+
+    // 更新发布状态
+    console.log(`node.data.isPublished: ${node.data.isPublished}`);
+    setIsPublished(node.data.isPublished); // 直接从节点对象中获取发布状态
   };
 
   const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
@@ -165,20 +177,39 @@ export default function WritePage() {
 
   const handlePublish = async () => {
     if (selectedNodeId) {
-      // 使用 selectedNodeId
-      console.log(`准备发布文档，节点ID: ${selectedNodeId}`); // 添加日志输出
+      console.log(`准备发布文档，节点ID: ${selectedNodeId}`);
       try {
         const response = await publishDocument({
-          variables: { id: selectedNodeId, isPublished: true },
-        }); // 传递 isPublished
-        console.log("发布成功，响应:", response); // 添加日志输出
+          variables: { id: selectedNodeId },
+        });
+        console.log("发布成功，响应:", response);
         alert("文档已成功发布！");
+        setIsPublished(true); // 更新发布状态
       } catch (error) {
         console.error("发布文档时出错:", error);
         alert("发布文档失败，请重试。");
       }
     } else {
-      console.warn("没有选中的节点ID，无法发布文档。"); // 添加日志输出
+      console.warn("没有选中的节点ID，无法发布文档。");
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (selectedNodeId) {
+      console.log(`准备取消发布文档，节点ID: ${selectedNodeId}`);
+      try {
+        const response = await unpublishDocument({
+          variables: { id: selectedNodeId },
+        });
+        console.log("取消发布成功，响应:", response);
+        alert("文档已成功取消发布！");
+        setIsPublished(false); // 更新发布状态
+      } catch (error) {
+        console.error("取消发布文档时出错:", error);
+        alert("取消发布文档失败，请重试。");
+      }
+    } else {
+      console.warn("没有选中的节点ID，无法取消发布文档。");
     }
   };
 
@@ -218,7 +249,7 @@ export default function WritePage() {
             <ReactFlowProvider>
               {activeTab === "node" ? (
                 <WriteNodeTree
-                  onNodeSelect={handleNodeSelect}
+                  onNodeSelect={onNodeSelect}
                   documentId={documentId}
                   selectedNodeId={selectedNodeId}
                 />
@@ -258,10 +289,10 @@ export default function WritePage() {
       </button>
 
       <button
-        onClick={handlePublish}
+        onClick={isPublished ? handleUnpublish : handlePublish} // 根据状态切换功能
         className="absolute right-0 top-0 mt-2 mr-2 p-2 bg-forest-accent hover:bg-forest-border rounded-md transition-colors duration-200"
       >
-        发布文档
+        {isPublished ? "取消发布" : "发布文档"} {/* 根据状态切换按钮文本 */}
       </button>
     </div>
   );

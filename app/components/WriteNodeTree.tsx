@@ -40,24 +40,28 @@ const GET_DOCUMENTS = gql`
       id
       fileName
       content
+      isPublished
       childrenConnection(sort: $sort) {
         edges {
           node {
             id
             fileName
             content
+            isPublished
             childrenConnection(sort: $sort) {
               edges {
                 node {
                   id
                   fileName
                   content
+                  isPublished
                   childrenConnection(sort: $sort) {
                     edges {
                       node {
                         id
                         fileName
                         content
+                        isPublished
                       }
                       properties {
                         order
@@ -84,6 +88,7 @@ interface DocumentNode {
   id: string;
   fileName: string;
   content: string;
+  isPublished: boolean; // 添加 isPublished 字段
   childrenConnection?: {
     edges: Array<{
       node: DocumentNode;
@@ -110,6 +115,7 @@ const formatGraphData = (
       data: {
         label: node.fileName,
         content: node.content,
+        isPublished: node.isPublished,
         depth,
         isSelected: false,
         layout,
@@ -135,11 +141,12 @@ const formatGraphData = (
   };
 
   processNode(document);
+  console.log("Nodes:", JSON.stringify(nodes, null, 2));
   return { nodes, edges };
 };
 
 interface WriteNodeTreeProps {
-  onNodeSelect: (nodeId: string, content: string) => void;
+  onNodeSelect: (node: DocumentNode) => void; // 修改为接收整个节点对象
   documentId: string;
   selectedNodeId: string | null;
 }
@@ -355,7 +362,9 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
           data: { ...node.data, isSelected: node.id === newSelectedNodeId },
         }))
       );
-      setEdges((eds) => updateEdgeStylesOnNodeClick(newSelectedNodeId, nodes, eds));
+      setEdges((eds) =>
+        updateEdgeStylesOnNodeClick(newSelectedNodeId, nodes, eds)
+      );
     },
     [nodes, setNodes, setEdges]
   );
@@ -363,14 +372,19 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        console.log("event.key:", event.key);
         setCurrentDfsIndex((prevIndex) => {
-          const newIndex = event.key === "ArrowLeft"
-            ? Math.max(prevIndex - 1, 0)
-            : Math.min(prevIndex + 1, dfsOrder.length - 1);
+          console.log("prevIndex:", prevIndex);
+          const newIndex =
+            event.key === "ArrowLeft"
+              ? Math.max(prevIndex - 1, 0)
+              : Math.min(prevIndex + 1, dfsOrder.length - 1);
+          console.log("newIndex:", newIndex);
+          console.log("dfsOrder:", dfsOrder);
           const nodeId = dfsOrder[newIndex];
           const node = nodes.find((n) => n.id === nodeId);
           if (node) {
-            onNodeSelect(node.id, node.data.content as string);
+            onNodeSelect(node);
             updateNodesAndEdges(node.id);
           }
           return newIndex;
@@ -389,7 +403,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      onNodeSelect(node.id, node.data.content as string);
+      onNodeSelect(node);
       updateNodesAndEdges(node.id);
       setCurrentDfsIndex(dfsOrder.findIndex((id) => id === node.id));
     },

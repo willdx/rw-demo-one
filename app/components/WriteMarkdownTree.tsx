@@ -1,6 +1,14 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState, useRef, forwardRef, useImperativeHandle } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import {
   ReactFlow,
   Controls,
@@ -123,16 +131,17 @@ const CustomNode: React.FC<{
   </div>
 );
 
-const WriteMarkdownTree = forwardRef<WriteMarkdownTreeRef, WriteMarkdownTreeProps>(({
-  content,
-  onNodeSelect,
-  selectedNodeId,
-}, ref) => {
+const WriteMarkdownTree = forwardRef<
+  WriteMarkdownTreeRef,
+  WriteMarkdownTreeProps
+>(({ content, onNodeSelect, selectedNodeId }, ref) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView } = useReactFlow();
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
-  
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
+    "auto"
+  );
+
   // 使用 useRef 来存储解析后的 Markdown 结构
   const parsedMarkdownRef = useRef<MarkdownNode[]>([]);
 
@@ -189,27 +198,31 @@ const WriteMarkdownTree = forwardRef<WriteMarkdownTreeRef, WriteMarkdownTreeProp
     return { nodes, edges };
   }, []);
 
-  const updateNodesAndEdges = useCallback((direction: "LR" | "TB") => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(direction);
-    const updatedNodes = layoutedNodes.map((node) => ({
-      ...node,
-      data: {
-        ...node.data,
-        isSelected: node.id === selectedNodeId,
-        layout: direction,
-      },
-    }));
-    setNodes(updatedNodes);
+  const updateNodesAndEdges = useCallback(
+    (direction: "LR" | "TB") => {
+      const { nodes: layoutedNodes, edges: layoutedEdges } =
+        getLayoutedElements(direction);
+      const updatedNodes = layoutedNodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isSelected: node.id === selectedNodeId,
+          layout: direction,
+        },
+      }));
+      setNodes(updatedNodes);
 
-    const updatedEdges = updateEdgeStylesOnNodeClick(
-      selectedNodeId || updatedNodes[0].id,
-      updatedNodes,
-      layoutedEdges
-    );
-    setEdges(updatedEdges);
+      const updatedEdges = updateEdgeStylesOnNodeClick(
+        selectedNodeId || updatedNodes[0].id,
+        updatedNodes,
+        layoutedEdges
+      );
+      setEdges(updatedEdges);
 
-    setTimeout(() => fitView({ padding: 0.2 }), 0);
-  }, [getLayoutedElements, selectedNodeId, setNodes, setEdges, fitView]);
+      setTimeout(() => fitView({ padding: 0.2 }), 0);
+    },
+    [getLayoutedElements, selectedNodeId, setNodes, setEdges, fitView]
+  );
 
   useEffect(() => {
     updateNodesAndEdges("LR");
@@ -235,29 +248,32 @@ const WriteMarkdownTree = forwardRef<WriteMarkdownTreeRef, WriteMarkdownTreeProp
     }
   }, [nodes, edges, selectedNodeId]);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (event.key === "ArrowLeft") {
-      setCurrentDfsIndex((prevIndex) => {
-        const newIndex = Math.max(prevIndex - 1, 0);
-        const nodeId = dfsOrder[newIndex];
-        const node = nodes.find((n) => n.id === nodeId);
-        if (node) {
-          onNodeSelect(node.id, node.data.content as string);
-        }
-        return newIndex;
-      });
-    } else if (event.key === "ArrowRight") {
-      setCurrentDfsIndex((prevIndex) => {
-        const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
-        const nodeId = dfsOrder[newIndex];
-        const node = nodes.find((n) => n.id === nodeId);
-        if (node) {
-          onNodeSelect(node.id, node.data.content as string);
-        }
-        return newIndex;
-      });
-    }
-  }, [dfsOrder, nodes, onNodeSelect]);
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.max(prevIndex - 1, 0);
+          const nodeId = dfsOrder[newIndex];
+          const node = nodes.find((n) => n.id === nodeId);
+          if (node) {
+            onNodeSelect(node.id, node.data.content as string);
+          }
+          return newIndex;
+        });
+      } else if (event.key === "ArrowRight") {
+        setCurrentDfsIndex((prevIndex) => {
+          const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
+          const nodeId = dfsOrder[newIndex];
+          const node = nodes.find((n) => n.id === nodeId);
+          if (node) {
+            onNodeSelect(node.id, node.data.content as string);
+          }
+          return newIndex;
+        });
+      }
+    },
+    [dfsOrder, nodes, onNodeSelect]
+  );
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -266,14 +282,17 @@ const WriteMarkdownTree = forwardRef<WriteMarkdownTreeRef, WriteMarkdownTreeProp
     };
   }, [handleKeyDown]);
 
-  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    if (node.data) {
-      onNodeSelect(node.id, node.data.content || "");
-      const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
-      setEdges(updatedEdges);
-      setCurrentDfsIndex(dfsOrder.findIndex((id) => id === node.id));
-    }
-  }, [onNodeSelect, nodes, edges, setEdges, dfsOrder]);
+  const handleNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (node.data) {
+        onNodeSelect(node.id, node.data.content || "");
+        const updatedEdges = updateEdgeStylesOnNodeClick(node.id, nodes, edges);
+        setEdges(updatedEdges);
+        setCurrentDfsIndex(dfsOrder.findIndex((id) => id === node.id));
+      }
+    },
+    [onNodeSelect, nodes, edges, setEdges, dfsOrder]
+  );
 
   // 使用 useImperativeHandle 暴露 getParsedMarkdown 方法
   useImperativeHandle(ref, () => ({
