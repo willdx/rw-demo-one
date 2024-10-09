@@ -58,9 +58,8 @@ const VditorEditor: React.FC<VditorEditorProps> = ({
 
   useEffect(() => {
     if (isEditorReady && editorRef.current) {
-      const contentToSet = content || ""; // 确保 content 是一个字符串
-      console.log(`设置编辑器内容，长度: ${contentToSet.length}`);
-      editorRef.current.setValue(contentToSet);
+      console.log(`设置编辑器内容，长度: ${content.length}`);
+      editorRef.current.setValue(content);
     }
   }, [content, isEditorReady]);
 

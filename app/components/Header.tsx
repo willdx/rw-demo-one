@@ -6,9 +6,13 @@ import { useEffect, useState } from "react";
 import LoginModal from "./LoginModal";
 import RegisterModal from "./RegisterModal";
 import UserMenu from "./UserMenu";
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from "../contexts/AuthContext";
 
-export default function Header({ showAlert }: { showAlert: (message: string) => void }) {
+export default function Header({
+  showToast,
+}: {
+  showToast: (message: string) => void;
+}) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const { user, logout, isLoading } = useAuth();
@@ -22,17 +26,17 @@ export default function Header({ showAlert }: { showAlert: (message: string) => 
 
   const handleLoginSuccess = () => {
     setIsLoginModalOpen(false);
-    showAlert('登录成功！');
+    showToast("登录成功！");
   };
 
   const handleRegisterSuccess = () => {
     setIsRegisterModalOpen(false);
-    showAlert('注册成功！');
+    showToast("注册成功！");
   };
 
   const handleLogout = () => {
     logout();
-    showAlert('已注销！');
+    showToast("已注销！");
   };
 
   return (

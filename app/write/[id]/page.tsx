@@ -24,6 +24,7 @@ import {
   MarkdownNode,
   replaceNodeContent,
 } from "../../utils/markdownUtils";
+import Toast from "@/app/components/Toast";
 
 export default function WritePage() {
   const params = useParams();
@@ -42,6 +43,13 @@ export default function WritePage() {
     null
   );
   const writeMarkdownTreeRef = useRef<WriteMarkdownTreeRef>(null);
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000); // 3秒后自动消失
+  };
 
   const { data } = useQuery(GET_DOCUMENT, {
     variables: { id: documentId },
@@ -183,11 +191,11 @@ export default function WritePage() {
           variables: { id: selectedNodeId },
         });
         console.log("发布成功，响应:", response);
-        alert("文档已成功发布！");
+        showToast("文档已成功发布！"); // 使用 showToast 显示消息
         setIsPublished(true); // 更新发布状态
       } catch (error) {
         console.error("发布文档时出错:", error);
-        alert("发布文档失败，请重试。");
+        showToast("发布文档失败，请重试。"); // 使用 showToast 显示消息
       }
     } else {
       console.warn("没有选中的节点ID，无法发布文档。");
@@ -202,11 +210,11 @@ export default function WritePage() {
           variables: { id: selectedNodeId },
         });
         console.log("取消发布成功，响应:", response);
-        alert("文档已成功取消发布！");
+        showToast("文档已成功取消发布！"); // 使用 showToast 显示消息
         setIsPublished(false); // 更新发布状态
       } catch (error) {
         console.error("取消发布文档时出错:", error);
-        alert("取消发布文档失败，请重试。");
+        showToast("取消发布文档失败，请重试。"); // 使用 showToast 显示消息
       }
     } else {
       console.warn("没有选中的节点ID，无法取消发布文档。");
@@ -288,12 +296,22 @@ export default function WritePage() {
         )}
       </button>
 
-      <button
-        onClick={isPublished ? handleUnpublish : handlePublish} // 根据状态切换功能
-        className="absolute right-0 top-0 mt-2 mr-2 p-2 bg-forest-accent hover:bg-forest-border rounded-md transition-colors duration-200"
-      >
-        {isPublished ? "取消发布" : "发布文档"} {/* 根据状态切换按钮文本 */}
-      </button>
+      <div className="absolute right-0 top-0 mt-4 mr-4">
+        <button
+          className={`btn ${isPublished ? "btn-secondary" : "btn-primary"}`}
+          onClick={() => {
+            if (isPublished) {
+              handleUnpublish();
+            } else {
+              handlePublish();
+            }
+          }}
+        >
+          {isPublished ? "取消发布" : "发布文档"}
+        </button>
+      </div>
+
+      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
 }
