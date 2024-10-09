@@ -17,6 +17,8 @@ import {
   ChevronRightIcon,
   BookOpenIcon,
   DocumentTextIcon,
+  ArrowUpCircleIcon,
+  ArrowDownCircleIcon,
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
 import {
@@ -296,19 +298,28 @@ export default function WritePage() {
         )}
       </button>
 
-      <div className="absolute right-0 top-0 mt-4 mr-4">
-        <button
-          className={`btn ${isPublished ? "btn-secondary" : "btn-primary"}`}
-          onClick={() => {
-            if (isPublished) {
-              handleUnpublish();
-            } else {
-              handlePublish();
-            }
-          }}
+      <div className="absolute right-0 bottom-0 mb-6 mr-8">
+        <div
+          className="tooltip"
+          data-tip={isPublished ? "取消发布" : "发布文档"}
         >
-          {isPublished ? "取消发布" : "发布文档"}
-        </button>
+          <div
+            className="cursor-pointer"
+            onClick={() => {
+              if (isPublished) {
+                handleUnpublish();
+              } else {
+                handlePublish();
+              }
+            }}
+          >
+            {isPublished ? (
+              <ArrowDownCircleIcon className="h-8 w-8 text-secondary" />
+            ) : (
+              <ArrowUpCircleIcon className="h-8 w-8 text-primary" />
+            )}
+          </div>
+        </div>
       </div>
 
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
