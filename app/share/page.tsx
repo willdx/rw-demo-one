@@ -8,80 +8,56 @@ import Header from "../components/Header";
 import Toast from "../components/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import debounce from "lodash/debounce";
+import MarkdownRenderer from "../components/MarkdownRenderer";
 
 const SharePage = () => {
   const { token } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [after, setAfter] = useState<string | null>(null); // 用于存储 endCursor
-  const [limit] = useState(10); // 设置每页显示的文档数量为10
-  const [hasNextPage, setHasNextPage] = useState(true); // 用于判断是否有下一页
+  const [after, setAfter] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const limit = 1;
 
-  // 获取已发布文档
-  const {
-    data: publishedData,
-    loading: loadingPublished,
-    error: errorPublished,
-  } = useQuery(GET_PUBLISHED_DOCUMENTS, {
-    variables: { first: limit, after },
+  const { loading, data, fetchMore } = useQuery(GET_PUBLISHED_DOCUMENTS, {
+    variables: { first: limit, after: null },
     context: {
       headers: {
         authorization: token ? `Bearer ${token}` : "",
       },
     },
     skip: !token,
+    notifyOnNetworkStatusChange: true,
   });
 
-  // 搜索文档
-  const {
-    data: searchData,
-    loading: loadingSearch,
-    error: errorSearch,
-  } = useQuery(SEARCH_DOCUMENTS, {
-    variables: { searchTerm, first: limit, after },
-    skip: !searchTerm || !token,
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
+  const { data: searchData, loading: searchLoading } = useQuery(
+    SEARCH_DOCUMENTS,
+    {
+      variables: { searchTerm, first: limit, after: null },
+      skip: !searchTerm || !token,
+      context: {
+        headers: {
+          authorization: token ? `Bearer ${token}` : "",
+        },
       },
-    },
-  });
-
-  useEffect(() => {
-    if (publishedData) {
-      console.log("Published data received:", publishedData);
-      const newDocuments = publishedData.documentsConnection.edges.map(
-        (edge) => edge.node
-      );
-      if (
-        newDocuments.length > 0 &&
-        !documents.some((doc) =>
-          newDocuments.some((newDoc) => newDoc.id === doc.id)
-        )
-      ) {
-        setDocuments((prev) => [...prev, ...newDocuments]); // 追加方式更新文档列表
-      }
-      setLoading(false);
     }
-  }, [publishedData]);
+  );
 
   useEffect(() => {
-    if (searchData) {
-      console.log("Search data received:", searchData);
-      const newDocuments = searchData.documentsConnection.edges.map(
-        (edge) => edge.node
+    if (data?.documentsConnection) {
+      setDocuments(data.documentsConnection.edges.map((edge) => edge.node));
+      setHasNextPage(data.documentsConnection.pageInfo.hasNextPage);
+      setAfter(data.documentsConnection.pageInfo.endCursor);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    if (searchData?.documentsConnection) {
+      setDocuments(
+        searchData.documentsConnection.edges.map((edge) => edge.node)
       );
-      if (
-        newDocuments.length > 0 &&
-        !documents.some((doc) =>
-          newDocuments.some((newDoc) => newDoc.id === doc.id)
-        )
-      ) {
-        setDocuments((prev) => [...prev, ...newDocuments]); // 追加方式更新文档列表
-      }
-      setLoading(false);
+      setHasNextPage(searchData.documentsConnection.pageInfo.hasNextPage);
+      setAfter(searchData.documentsConnection.pageInfo.endCursor);
     }
   }, [searchData]);
 
@@ -92,15 +68,27 @@ const SharePage = () => {
     []
   );
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
     if (hasNextPage) {
-      console.log("Loading more documents...");
-      setHasNextPage(publishedData.documentsConnection.pageInfo.hasNextPage);
-      setAfter(publishedData.documentsConnection.pageInfo.endCursor);
-    } else {
-      console.log("No more pages to load.");
+      fetchMore({
+        variables: {
+          after,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult) return prev;
+          return {
+            documentsConnection: {
+              ...fetchMoreResult.documentsConnection,
+              edges: [
+                ...prev.documentsConnection.edges,
+                ...fetchMoreResult.documentsConnection.edges,
+              ],
+            },
+          };
+        },
+      });
     }
-  };
+  }, [fetchMore, after, hasNextPage]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -120,46 +108,36 @@ const SharePage = () => {
           />
         </div>
         <div className="container w-full h-full flex justify-center items-center">
-          {loading ? (
+          {loading || searchLoading ? (
             <div>
               <span className="loading loading-ring text-accent w-18 h-18"></span>
               <span className="loading loading-ring text-accent w-18 h-18"></span>
               <span className="loading loading-ring text-accent w-18 h-18"></span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 min-h-36">
+            <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 w-full h-full gap-8">
               {documents.map((doc) => (
-                <Link
-                  key={`${doc.id}-${doc.fileName}`}
-                  href={`/read/${doc.id}`}
-                >
-                  <div className="border p-4 rounded-lg hover:shadow-lg transition-shadow w-full h-full">
-                    <h2 className="font-semibold text-lg">{doc.fileName}</h2>
-                    <p>
-                      {doc.content.length > 500
-                        ? `${doc.content.substring(0, 500)}...`
-                        : doc.content}
-                    </p>
-                  </div>
-                </Link>
+                <div key={`${doc.id}-${doc.fileName}`}>
+                  <Link href={`/read/${doc.id}`}>
+                    <MarkdownRenderer content={doc.content} />
+                  </Link>
+                </div>
               ))}
             </div>
           )}
         </div>
-        {/* 加载更多按钮 */}
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={handleLoadMore}
-            className={`bg-accent text-white rounded-md p-2 hover:bg-accent-focus transition-colors duration-300 ${
-              !hasNextPage ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            disabled={!hasNextPage}
-          >
-            {hasNextPage ? "加载更多" : "没有更多数据"}
-          </button>
-        </div>
+        {hasNextPage && (
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={handleLoadMore}
+              className="bg-accent text-white rounded-md p-2 hover:bg-accent-focus transition-colors duration-300"
+              disabled={loading || searchLoading}
+            >
+              {loading || searchLoading ? "加载中..." : "加载更多"}
+            </button>
+          </div>
+        )}
       </div>
-
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );

@@ -55,7 +55,7 @@ export default function Header({
           </Link>
         </div>
         <div className="navbar-end">
-          <Link href="/library" className="btn btn-ghost">
+          <Link href="/share" className="btn btn-ghost">
             知识库
           </Link>
           <div className="divider divider-horizontal" />
