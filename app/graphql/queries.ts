@@ -29,16 +29,29 @@ export const UPDATE_DOCUMENT = gql`
 
 // 获取已发布文档的查询
 export const GET_PUBLISHED_DOCUMENTS = gql`
-  query getPublishedDocuments {
-    documents(
+  query getPublishedDocuments($first: Int, $after: String) {
+    documentsConnection(
       where: { isPublished: true }
-      options: { sort: { updatedAt: DESC } }
+      sort: [{ updatedAt: DESC }]
+      first: $first
+      after: $after
     ) {
-      id
-      fileName
-      content
-      creator {
-        id
+      totalCount
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      edges {
+        node {
+          id
+          fileName
+          content
+          creator {
+            id
+          }
+        }
       }
     }
   }
@@ -46,16 +59,29 @@ export const GET_PUBLISHED_DOCUMENTS = gql`
 
 // 搜索文档的查询
 export const SEARCH_DOCUMENTS = gql`
-  query searchDocuments($searchTerm: String!) {
-    documents(
+  query searchDocuments($searchTerm: String!, $first: Int, $after: String) {
+    documentsConnection(
       where: { isPublished: true, content_CONTAINS: $searchTerm }
-      options: { sort: { updatedAt: DESC } }
+      sort: [{ updatedAt: DESC }]
+      first: $first
+      after: $after
     ) {
-      id
-      fileName
-      content
-      creator {
-        id
+      totalCount
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      edges {
+        node {
+          id
+          fileName
+          content
+          creator {
+            id
+          }
+        }
       }
     }
   }
