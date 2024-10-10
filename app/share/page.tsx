@@ -16,7 +16,7 @@ const SharePage = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [after, setAfter] = useState<string | null>(null); // 用于存储 endCursor
-  const [limit] = useState(1); // 设置每页显示的文档数量为1
+  const [limit] = useState(10); // 设置每页显示的文档数量为10
   const [hasNextPage, setHasNextPage] = useState(true); // 用于判断是否有下一页
 
   // 获取已发布文档
@@ -115,7 +115,7 @@ const SharePage = () => {
           <input
             type="text"
             placeholder="搜索文档..."
-            className="border border-gray-300 rounded-md p-2 mb-4 w-1/3"
+            className="border border-gray-300 rounded-md p-2 mb-4 w-1/3 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
@@ -150,10 +150,10 @@ const SharePage = () => {
         <div className="flex justify-center mt-4">
           <button
             onClick={handleLoadMore}
-            className={`bg-blue-500 text-white rounded-md p-2 ${
-              !hasNextPage ? "bg-gray-400 cursor-not-allowed" : ""
+            className={`bg-accent text-white rounded-md p-2 hover:bg-accent-focus transition-colors duration-300 ${
+              !hasNextPage ? "opacity-50 cursor-not-allowed" : ""
             }`}
-            disabled={!hasNextPage} // 根据是否有下一页禁用按钮
+            disabled={!hasNextPage}
           >
             {hasNextPage ? "加载更多" : "没有更多数据"}
           </button>
