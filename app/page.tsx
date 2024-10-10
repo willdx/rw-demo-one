@@ -12,7 +12,7 @@ export default function Home() {
 
   const showToast = (message: string) => {
     setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000); // 3秒后自动消失
+    setTimeout(() => setToastMessage(null), 1000);
   };
 
   return (
