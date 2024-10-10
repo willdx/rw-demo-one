@@ -48,14 +48,14 @@ const SharePage = () => {
   useEffect(() => {
     if (publishedData) {
       setDocuments(publishedData.documents);
-      setLoading(false); // 数据加载完成
+      setLoading(false);
     }
   }, [publishedData]);
 
   useEffect(() => {
     if (searchData) {
       setDocuments(searchData.documents);
-      setLoading(false); // 数据加载完成
+      setLoading(false);
     }
   }, [searchData]);
 
@@ -75,7 +75,7 @@ const SharePage = () => {
     <div className="flex flex-col min-h-screen">
       <Header showToast={showToast} />
       <div className="container mx-auto p-4 flex-grow">
-        <div className="flex flex-col items-center mb-4 h-48 justify-center ">
+        <div className="flex flex-col items-center mb-4 h-48 justify-center">
           <input
             type="text"
             placeholder="搜索文档..."
@@ -83,20 +83,18 @@ const SharePage = () => {
             onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 min-h-[300px]">
-          {" "}
-          {/* 设置最小高度 */}
+        <div className="container w-full h-full flex justify-center items-center">
           {loading ? (
-            <p>加载中...</p>
+            <div>
+              <span className="loading loading-ring text-accent w-18 h-18"></span>
+              <span className="loading loading-ring text-accent w-18 h-18"></span>
+              <span className="loading loading-ring text-accent w-18 h-18"></span>
+            </div>
           ) : (
-            <>
-              {loadingPublished && <p>加载中...</p>}
-              {errorPublished && <p>发生错误: {errorPublished.message}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 min-h-36">
               {documents.map((doc) => (
                 <Link key={doc.id} href={`/read/${doc.id}`}>
                   <div className="border p-4 rounded-lg hover:shadow-lg transition-shadow w-full h-full">
-                    {" "}
-                    {/* 设置宽度为100% */}
                     <h2 className="font-semibold text-lg">{doc.fileName}</h2>
                     <p>
                       {doc.content.length > 500
@@ -106,10 +104,11 @@ const SharePage = () => {
                   </div>
                 </Link>
               ))}
-            </>
+            </div>
           )}
         </div>
       </div>
+
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
