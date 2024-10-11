@@ -80,6 +80,7 @@ const driver = neo4j.driver(
 const ogm = new OGM({ typeDefs, driver });
 const User = ogm.model("User");
 const Role = ogm.model("Role");
+const Document = ogm.model("Document");
 
 const neoSchema = new Neo4jGraphQL({
   typeDefs,
@@ -149,9 +150,21 @@ const neoSchema = new Neo4jGraphQL({
           throw new Error(`密码错误`);
         }
 
-        const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET!, {
-          expiresIn: "1d",
+        // 获取用户根文档
+        const [rootDocument] = await Document.find({
+          where: { creator: { id: user.id } },
+          options: { sort: [{ createdAt: "ASC" }], limit: 1 },
         });
+
+        const rootId = rootDocument?.id || null;
+
+        const token = jwt.sign(
+          { sub: user.id, rootId: rootId },
+          process.env.JWT_SECRET!,
+          {
+            expiresIn: "1d",
+          }
+        );
 
         return {
           token,
@@ -204,7 +217,7 @@ export default startServerAndCreateNextHandler(await createApolloServer(), {
         decodedToken = jwt.verify(
           token.replace("Bearer ", ""),
           process.env.JWT_SECRET!
-        ) as { sub: string };
+        ) as { sub: string; root_id: string | null };
         const [user] = await User.find({ where: { id: decodedToken.sub } });
         currentUser = user;
       } catch (err) {

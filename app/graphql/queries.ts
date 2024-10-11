@@ -86,3 +86,20 @@ export const SEARCH_DOCUMENTS = gql`
     }
   }
 `;
+
+// 新增获取用户根文档的查询
+export const GET_USER_ROOT_DOCUMENT = gql`
+  query getUserRootDocument($userId: ID!) {
+    documents(
+      where: { creator: { id: $userId } }
+      options: { sort: { createdAt: DESC }, limit: 1 }
+    ) {
+      id
+      fileName
+      content
+      creator {
+        id
+      }
+    }
+  }
+`;

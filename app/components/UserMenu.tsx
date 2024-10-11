@@ -2,16 +2,21 @@
 
 import { useAuth } from "../contexts/AuthContext";
 import Image from "next/image";
+import Link from "next/link";
+
 interface UserMenuProps {
   onLogout: () => void;
 }
 
 export default function UserMenu({ onLogout }: UserMenuProps) {
-  const { user } = useAuth();
+  const { user, rootId } = useAuth();
 
   return (
     <div className="dropdown dropdown-end">
-      <label tabIndex={0} className="btn btn-ghost btn-circle avatar border-2 border-primary hover:border-secondary transition-colors duration-300">
+      <label
+        tabIndex={0}
+        className="btn btn-ghost btn-circle avatar border-2 border-primary hover:border-secondary transition-colors duration-300"
+      >
         <div className="w-10 rounded-full">
           <Image
             src="/logo.png"
@@ -29,11 +34,15 @@ export default function UserMenu({ onLogout }: UserMenuProps) {
         <li>
           <a className="justify-between">
             {user?.username}
-            <span className="badge">New</span>
+            {/* <span className="badge">New</span> */}
           </a>
         </li>
         <li>
-          <a>设置</a>
+          {rootId ? (
+            <Link href={`/write/${rootId}`}>写作</Link>
+          ) : (
+            <span className="text-gray-400">写作</span>
+          )}
         </li>
         <li>
           <a onClick={onLogout}>登出</a>
