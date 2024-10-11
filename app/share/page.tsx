@@ -29,9 +29,7 @@ const SharePage: React.FC = () => {
       <Header showToast={showToast} />
       <main className="flex-grow">
         <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-extrabold text-gray-900 text-center mb-8">
-            探索共享知识库
-          </h1>
+          <h1 className="text-4xl font-extrabold text-gray-900 text-center mb-8"></h1>
           <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
           <DocumentList
             documents={documents}

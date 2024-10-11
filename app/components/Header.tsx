@@ -40,7 +40,7 @@ export default function Header({
   };
 
   return (
-    <header className="bg-base-100 shadow-lg">
+    <header className="bg-base-100 shadow-[1px]">
       <div className="navbar container mx-auto">
         <div className="navbar-start">
           <Link href="/" className="btn btn-ghost normal-case text-xl">
