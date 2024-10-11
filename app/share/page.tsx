@@ -10,8 +10,14 @@ import Footer from "../components/Footer";
 
 const SharePage: React.FC = () => {
   const { token } = useAuth();
-  const { documents, searchTerm, setSearchTerm, loadMore, hasNextPage } =
-    useDocuments(token);
+  const {
+    documents,
+    searchTerm,
+    setSearchTerm,
+    loadMore,
+    hasNextPage,
+    isLoading,
+  } = useDocuments(token);
 
   const showToast = (message: string) => {
     // 实现显示 toast 的逻辑
@@ -19,15 +25,21 @@ const SharePage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Header showToast={showToast} />
-      <main className="container mx-auto p-4 flex-grow">
-        <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-        <DocumentList
-          documents={documents}
-          onLoadMore={loadMore}
-          hasNextPage={hasNextPage}
-        />
+      <main className="flex-grow">
+        <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-4xl font-extrabold text-gray-900 text-center mb-8">
+            探索共享知识库
+          </h1>
+          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+          <DocumentList
+            documents={documents}
+            onLoadMore={loadMore}
+            hasNextPage={hasNextPage}
+            isLoading={isLoading}
+          />
+        </div>
       </main>
       <Footer />
     </div>

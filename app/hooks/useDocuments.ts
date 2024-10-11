@@ -8,7 +8,7 @@ const LIMIT = 1;
 export const useDocuments = (token: string | null) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: publishedData, fetchMore: publishedFetchMore } = useQuery<{
+  const { data: publishedData, fetchMore: publishedFetchMore, loading: publishedLoading } = useQuery<{
     documentsConnection: DocumentsConnection;
   }>(GET_PUBLISHED_DOCUMENTS, {
     variables: { first: LIMIT, after: null },
@@ -16,7 +16,7 @@ export const useDocuments = (token: string | null) => {
     skip: !token || !!searchTerm,
   });
 
-  const { data: searchData, fetchMore: searchFetchMore } = useQuery<{
+  const { data: searchData, fetchMore: searchFetchMore, loading: searchLoading } = useQuery<{
     documentsConnection: DocumentsConnection;
   }>(SEARCH_DOCUMENTS, {
     variables: { searchTerm, first: LIMIT, after: null },
@@ -26,6 +26,7 @@ export const useDocuments = (token: string | null) => {
 
   const currentData = searchTerm ? searchData : publishedData;
   const currentFetchMore = searchTerm ? searchFetchMore : publishedFetchMore;
+  const isLoading = searchTerm ? searchLoading : publishedLoading;
 
   const documents = useMemo(() => {
     return currentData?.documentsConnection.edges.map((edge) => edge.node) || [];
@@ -55,5 +56,5 @@ export const useDocuments = (token: string | null) => {
     }
   }, [currentFetchMore, currentData, hasNextPage]);
 
-  return { documents, searchTerm, setSearchTerm, loadMore, hasNextPage };
+  return { documents, searchTerm, setSearchTerm, loadMore, hasNextPage, isLoading };
 };
