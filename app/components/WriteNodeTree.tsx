@@ -24,6 +24,8 @@ import dagre from "dagre";
 import { useQuery, gql } from "@apollo/client";
 import { useAuth } from "../contexts/AuthContext";
 import TreeSkeleton from "./TreeSkeleton";
+import ContextMenu from "./ContextMenu";
+import Link from "next/link";
 
 // 常量定义
 const NODE_WIDTH = 200;
@@ -191,7 +193,7 @@ const CustomNode: React.FC<{
   </>
 );
 
-// 更新边样式
+// 更新边样
 const updateEdgeStylesOnNodeClick = (
   selectedNodeId: string,
   nodes: Node[],
@@ -446,6 +448,33 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     [updateLayout]
   );
 
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    nodeId: string | null;
+  } | null>(null);
+
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      const nodeId = selectedNodeId;
+      setContextMenu({ x: event.clientX, y: event.clientY, nodeId });
+    },
+    [selectedNodeId]
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = () => closeContextMenu();
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [closeContextMenu]);
+
   if (loading) return <TreeSkeleton />;
   if (error)
     return (
@@ -455,35 +484,64 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     );
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onNodeClick={handleNodeClick}
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-      proOptions={{ hideAttribution: true }}
-      className="w-full h-full"
-      nodeTypes={{ customNode: CustomNode }}
-    >
-      <Controls>
-        <ControlButton onClick={onToggleLayout} title="切换布局">
-          <ViewColumnsIcon
-            className={`w-4 h-4 ${
-              layout === "vertical" ? "transform rotate-90" : ""
-            }`}
-          />
-        </ControlButton>
-      </Controls>
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={12}
-        size={1}
-        color="#e0e0e0"
-      />
-    </ReactFlow>
+    <div onContextMenu={handleContextMenu} className="relative w-full h-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={handleNodeClick}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        proOptions={{ hideAttribution: true }}
+        className="w-full h-full"
+        nodeTypes={{ customNode: CustomNode }}
+      >
+        <Controls>
+          <ControlButton onClick={onToggleLayout} title="切换布局">
+            <ViewColumnsIcon
+              className={`w-4 h-4 ${
+                layout === "vertical" ? "transform rotate-90" : ""
+              }`}
+            />
+          </ControlButton>
+        </Controls>
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={12}
+          size={1}
+          color="#e0e0e0"
+        />
+      </ReactFlow>
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={closeContextMenu}
+        >
+          <li>
+            <Link
+              href={`/write/${contextMenu.nodeId}`}
+              onClick={closeContextMenu}
+            >
+              <span>从当前节点打开</span>
+            </Link>
+          </li>
+          <li className="disabled">
+            <a>禁用的选项</a>
+          </li>
+          <li>
+            <a onClick={() => {
+              // 处理其他操作
+              closeContextMenu();
+            }}>
+              其他操作
+            </a>
+          </li>
+        </ContextMenu>
+      )}
+    </div>
   );
 };
 
