@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { GET_DOCUMENT, UPDATE_DOCUMENT } from "../../graphql/queries";
+import {
+  GET_DOCUMENT,
+  UPDATE_DOCUMENT,
+  SEARCH_DOCUMENTS,
+} from "../../graphql/queries";
 import { PUBLISH_DOCUMENT, UNPUBLISH_DOCUMENT } from "../../graphql/mutations";
 import WriteNodeTree from "../../components/WriteNodeTree";
 import WriteMarkdownTree, {
@@ -19,6 +23,8 @@ import {
   DocumentTextIcon,
   ArrowUpCircleIcon,
   ArrowDownCircleIcon,
+  MagnifyingGlassIcon,
+  ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
 import {
@@ -27,6 +33,7 @@ import {
   replaceNodeContent,
 } from "../../utils/markdownUtils";
 import Toast from "@/app/components/Toast";
+import SearchResults from "../../components/SearchResults";
 
 export default function WritePage() {
   const params = useParams();
@@ -47,6 +54,65 @@ export default function WritePage() {
   const writeMarkdownTreeRef = useRef<WriteMarkdownTreeRef>(null);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+
+  const {
+    data: searchData,
+    loading: searchLoading,
+    error: searchError,
+  } = useQuery(SEARCH_DOCUMENTS, {
+    variables: { searchTerm: searchQuery, first: 10 },
+    skip: !searchQuery,
+    context: {
+      headers: {
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (searchData && searchData.documentsConnection) {
+      const processedResults = searchData.documentsConnection.edges.map(
+        ({ node }) => ({
+          ...node,
+          matchedContent: highlightSearchResult(node.content, searchQuery),
+        })
+      );
+      setSearchResults(processedResults);
+    }
+  }, [searchData, searchQuery]);
+
+  // 添加高亮搜索结果的函数
+  const highlightSearchResult = (content: string, query: string) => {
+    const regex = new RegExp(`(${query})`, "gi");
+    const words = content.split(" ");
+    const matchIndex = words.findIndex((word) => regex.test(word));
+
+    if (matchIndex === -1) return content.slice(0, 200) + "...";
+
+    const start = Math.max(0, matchIndex - 5);
+    const end = Math.min(words.length, matchIndex + 15);
+    let excerpt = words.slice(start, end).join(" ");
+
+    if (start > 0) excerpt = "..." + excerpt;
+    if (end < words.length) excerpt += "...";
+
+    return excerpt.replace(regex, "<mark>$1</mark>");
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // 搜索查询已经通过 useQuery 自动触发，这里不需要额外的操作
+  };
+
+  const handleSearchResultClick = (result: SearchResult) => {
+    setContent(result.content);
+    setSelectedNodeId(result.id);
+    setIsSearchMode(false);
+  };
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -226,52 +292,89 @@ export default function WritePage() {
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
       <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar`}>
-        <div
-          className={`w-full h-full flex flex-col ${
-            leftCollapsed ? "invisible" : "visible"
-          }`}
-        >
-          <div className="flex border-b border-forest-border h-14">
-            <button
-              className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === "node"
-                  ? "text-forest-accent border-b-2 border-forest-accent"
-                  : "text-forest-text hover:text-forest-accent"
-              }`}
-              onClick={() => setActiveTab("node")}
-            >
-              <BookOpenIcon className="w-5 h-5 mr-2 inline-block" />
-              Article
-            </button>
-            <button
-              className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === "markdown"
-                  ? "text-forest-accent border-b-2 border-forest-accent"
-                  : "text-forest-text hover:text-forest-accent"
-              }`}
-              onClick={() => setActiveTab("markdown")}
-            >
-              <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
-              Chapter
-            </button>
+        <div className={`w-full h-full flex flex-col ${leftCollapsed ? "invisible" : "visible"}`}>
+          <div className="flex flex-col border-b border-forest-border">
+            <div className="flex items-center h-14 relative">
+              {isSearchMode ? (
+                <form onSubmit={handleSearch} className="w-full flex items-center">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="搜索文档..."
+                    className="w-full px-3 py-2 ml-12 bg-forest-bg text-forest-text border border-forest-border rounded focus:outline-none focus:ring-2 focus:ring-forest-accent" // 更新样式
+                  />
+                  <button type="submit" className="ml-2 p-1 bg-forest-accent text-white rounded">
+                    <MagnifyingGlassIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setIsSearchMode(false)}
+                    className="ml-2 p-1 bg-forest-bg text-forest-text border border-forest-border rounded"
+                  >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <button
+                    className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
+                      activeTab === "node"
+                        ? "text-forest-accent"
+                        : "text-forest-text hover:text-forest-accent"
+                    }`}
+                    onClick={() => setActiveTab("node")}
+                  >
+                    <BookOpenIcon className="w-5 h-5 mr-2 inline-block" />
+                    Article
+                  </button>
+                  <button
+                    className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
+                      activeTab === "markdown"
+                        ? "text-forest-accent"
+                        : "text-forest-text hover:text-forest-accent"
+                    }`}
+                    onClick={() => setActiveTab("markdown")}
+                  >
+                    <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
+                    Chapter
+                  </button>
+                  <button
+                    className="ml-auto p-2 text-forest-text hover:text-forest-accent"
+                    onClick={() => setIsSearchMode(true)}
+                  >
+                    <MagnifyingGlassIcon className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+              {/* 移除下划线 */}
+            </div>
           </div>
           <div className="flex-grow overflow-hidden p-2">
-            <ReactFlowProvider>
-              {activeTab === "node" ? (
-                <WriteNodeTree
-                  onNodeSelect={onNodeSelect}
-                  documentId={documentId}
-                  selectedNodeId={selectedNodeId}
-                />
-              ) : (
-                <WriteMarkdownTree
-                  ref={writeMarkdownTreeRef}
-                  content={fullContent}
-                  onNodeSelect={handleMarkdownNodeSelect}
-                  selectedNodeId={selectedChapterId}
-                />
-              )}
-            </ReactFlowProvider>
+            {isSearchMode ? (
+              <SearchResults
+                results={searchResults}
+                loading={searchLoading}
+                error={searchError}
+                onResultClick={handleSearchResultClick}
+              />
+            ) : (
+              <ReactFlowProvider>
+                {activeTab === "node" ? (
+                  <WriteNodeTree
+                    onNodeSelect={onNodeSelect}
+                    documentId={documentId}
+                    selectedNodeId={selectedNodeId}
+                  />
+                ) : (
+                  <WriteMarkdownTree
+                    ref={writeMarkdownTreeRef}
+                    content={fullContent}
+                    onNodeSelect={handleMarkdownNodeSelect}
+                    selectedNodeId={selectedChapterId}
+                  />
+                )}
+              </ReactFlowProvider>
+            )}
           </div>
         </div>
       </div>
