@@ -29,6 +29,7 @@ import Link from "next/link";
 import { CREATE_SUB_DOCUMENT } from "../graphql/mutations";
 import { useToast } from "../contexts/ToastContext";
 import { GET_DOCUMENTS } from "../graphql/queries";
+import { DELETE_DOCUMENTS_AND_CHILDREN } from "../graphql/mutations";
 
 // 常量定义
 const NODE_WIDTH = 200;
@@ -111,7 +112,6 @@ interface WriteNodeTreeProps {
   onNodeSelect: (node: DocumentNode) => void;
   documentId: string;
   selectedNodeId: string | null;
-  onDeleteNode: (nodeId: string) => void; // 新增的删除节点回调
 }
 
 // 自定义节点组件
@@ -253,7 +253,6 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   onNodeSelect,
   documentId,
   selectedNodeId,
-  onDeleteNode,
 }) => {
   const { token, user } = useAuth(); // 获取用户信息
   const { showToast } = useToast();
@@ -312,6 +311,16 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
       });
     },
   });
+
+  const [deleteDocumentsAndChildren] = useMutation(DELETE_DOCUMENTS_AND_CHILDREN, {
+    context: {
+      headers: {
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    },
+  });
+
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleAddNode = useCallback(
     async (parentId: string) => {
@@ -467,11 +476,13 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     nodeId: string;
   } | null>(null);
 
+  const [nodeToDelete, setNodeToDelete] = useState<string | null>(null);
+
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
       event.stopPropagation();
-      const pane = document.querySelector('.react-flow__pane');
+      const pane = document.querySelector(".react-flow__pane");
       if (pane) {
         const rect = pane.getBoundingClientRect();
         setContextMenu({
@@ -490,10 +501,43 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
   const handleDeleteNode = useCallback(() => {
     if (contextMenu) {
-      onDeleteNode(contextMenu.nodeId);
-      closeContextMenu(); // 添加这行来关闭上下文菜单
+      setNodeToDelete(contextMenu.nodeId);
+      const modal = document.getElementById(
+        "delete-confirm-modal"
+      ) as HTMLDialogElement;
+      if (modal) {
+        modal.showModal();
+      }
+      closeContextMenu();
     }
-  }, [contextMenu, onDeleteNode, closeContextMenu]);
+  }, [contextMenu, closeContextMenu]);
+
+  const confirmDelete = useCallback(async () => {
+    if (nodeToDelete) {
+      setIsDeleting(true);
+      try {
+        const response = await deleteDocumentsAndChildren({
+          variables: { id: nodeToDelete },
+        });
+        if (response.data.deleteDocumentsAndChildren) {
+          showToast("节点删除成功");
+          await refetch();
+        } else {
+          showToast("节点删除失败");
+        }
+      } catch (error) {
+        console.error("删除节点时出错:", error);
+        showToast("删除节点失败，请重试");
+      } finally {
+        setIsDeleting(false);
+        setNodeToDelete(null);
+        const modal = document.getElementById("delete-confirm-modal") as HTMLDialogElement;
+        if (modal) {
+          modal.close();
+        }
+      }
+    }
+  }, [nodeToDelete, deleteDocumentsAndChildren, refetch, showToast]);
 
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
@@ -601,6 +645,34 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
           </li>
         </ContextMenu>
       )}
+      <dialog
+        id="delete-confirm-modal"
+        className="modal modal-bottom sm:modal-middle"
+      >
+        <form method="dialog" className="modal-box">
+          <h3 className="font-bold text-lg">确认删除</h3>
+          <p className="py-4">确定要删除这个节点及其所有子节点吗？</p>
+          <div className="modal-action">
+            <button
+              className="btn"
+              onClick={() => {
+                setNodeToDelete(null);
+                (document.getElementById("delete-confirm-modal") as HTMLDialogElement).close();
+              }}
+              disabled={isDeleting}
+            >
+              取消
+            </button>
+            <button 
+              className={`btn btn-primary ${isDeleting ? 'loading' : ''}`} 
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              确定
+            </button>
+          </div>
+        </form>
+      </dialog>
     </div>
   );
 };

@@ -7,7 +7,12 @@ import {
   UPDATE_DOCUMENT,
   SEARCH_DOCUMENTS,
 } from "../../graphql/queries";
-import { PUBLISH_DOCUMENT, UNPUBLISH_DOCUMENT, DELETE_DOCUMENTS } from "../../graphql/mutations";
+import {
+  PUBLISH_DOCUMENT,
+  UNPUBLISH_DOCUMENT,
+  DELETE_DOCUMENTS,
+  DELETE_DOCUMENTS_AND_CHILDREN,
+} from "../../graphql/mutations";
 import WriteNodeTree from "../../components/WriteNodeTree";
 import WriteMarkdownTree, {
   WriteMarkdownTreeRef,
@@ -16,6 +21,7 @@ import VditorEditor from "../../components/VditorEditor";
 import { useParams } from "next/navigation";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "../../contexts/ToastContext";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -106,7 +112,7 @@ export default function WritePage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // 搜索查询已经通过 useQuery 自动触发，这里不需要额外的操作
+    // 搜索查询已经过 useQuery 自动触发��这里不需要额外的操作
   };
 
   const handleSearchResultClick = (result: SearchResult) => {
@@ -161,6 +167,17 @@ export default function WritePage() {
       },
     },
   });
+
+  const [deleteDocumentsAndChildren] = useMutation(
+    DELETE_DOCUMENTS_AND_CHILDREN,
+    {
+      context: {
+        headers: {
+          authorization: token ? `Bearer ${token}` : "",
+        },
+      },
+    }
+  );
 
   useEffect(() => {
     if (data && data.documents && data.documents.length > 0) {
@@ -268,7 +285,7 @@ export default function WritePage() {
         showToast("发布文档失败，请重试。"); // 使用 showToast 显示消息
       }
     } else {
-      console.warn("没有选中的节点ID，无法发布文档。");
+      console.warn("没有选中的节点ID，无法发布文档���");
     }
   };
 
@@ -292,25 +309,25 @@ export default function WritePage() {
   };
 
   const handleDeleteNode = async (nodeId: string) => {
-    if (confirm('确定要删除这个节点及其所有子节点吗？')) {
-      try {
-        const response = await deleteDocuments({
-          variables: { where: { id: nodeId } },
-        });
-        if (response.data.deleteDocuments.nodesDeleted > 0) {
-          showToast('节点删除成功');
-          // 切换到父节点或根节点
-          const parentNode = data.documents.find((doc: any) => doc.children.some((child: any) => child.id === nodeId));
-          setSelectedNodeId(parentNode ? parentNode.id : data.documents[0].id);
-          // 刷新文档树
-          refetch();
-        } else {
-          showToast('节点删除失败');
-        }
-      } catch (error) {
-        console.error('删除节点时出错:', error);
-        showToast('删除节点失败，请重试');
+    console.log("Attempting to delete node:", nodeId);
+    try {
+      const response = await deleteDocumentsAndChildren({
+        variables: { id: nodeId },
+      });
+      console.log("Delete response:", response);
+      if (response.data.deleteDocumentsAndChildren) {
+        showToast("节点删除成功");
+        // 切换到父节点或根节点
+        // const parentNode = data.documents.find((doc) => doc.children.some((child) => child.id === nodeId));
+        // setSelectedNodeId(parentNode ? parentNode.id : data.documents[0].id);
+        // 刷新文档树
+        refetch();
+      } else {
+        showToast("节点删除失败");
       }
+    } catch (error) {
+      console.error("删除节点时出错:", error);
+      showToast("删除节点失败，请重试");
     }
   };
 
@@ -399,7 +416,7 @@ export default function WritePage() {
                     onNodeSelect={onNodeSelect}
                     documentId={documentId}
                     selectedNodeId={selectedNodeId}
-                    onDeleteNode={handleDeleteNode} // 新增删除节点的回调
+                    onDeleteNode={handleDeleteNode}
                   />
                 ) : (
                   <WriteMarkdownTree

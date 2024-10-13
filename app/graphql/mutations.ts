@@ -31,7 +31,12 @@ export const UNPUBLISH_DOCUMENT = gql`
 `;
 
 export const CREATE_SUB_DOCUMENT = gql`
-  mutation CreateSubDocument($parentId: ID!, $fileName: String!, $content: String!, $creatorId: ID!) {
+  mutation CreateSubDocument(
+    $parentId: ID!
+    $fileName: String!
+    $content: String!
+    $creatorId: ID!
+  ) {
     updateDocuments(
       where: { id: $parentId }
       create: {
@@ -40,11 +45,7 @@ export const CREATE_SUB_DOCUMENT = gql`
             node: {
               fileName: $fileName
               content: $content
-              creator: {
-                connect: {
-                  where: { node: { id: $creatorId } }
-                }
-              }
+              creator: { connect: { where: { node: { id: $creatorId } } } }
             }
             edge: { order: 1000 }
           }
@@ -69,5 +70,11 @@ export const DELETE_DOCUMENTS = gql`
     deleteDocuments(where: $where) {
       nodesDeleted
     }
+  }
+`;
+
+export const DELETE_DOCUMENTS_AND_CHILDREN = gql`
+  mutation DeleteDocumentsAndChildren($id: ID!) {
+    deleteDocumentsAndChildren(id: $id)
   }
 `;

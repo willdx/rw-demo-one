@@ -64,6 +64,7 @@ const typeDefs = gql`
     signUp(email: String!, password: String!, username: String!): AuthPayload!
     signIn(email: String!, password: String!): AuthPayload!
     createInitialRoles: Boolean!
+    deleteDocumentsAndChildren(id: ID!): Boolean!
   }
 
   type AuthPayload {
@@ -184,6 +185,29 @@ const neoSchema = new Neo4jGraphQL({
 
         return true;
       },
+
+      deleteDocumentsAndChildren: async (_, { id }, context) => {
+        const session = context.driver.session();
+        try {
+          await session.run(
+            `
+            MATCH (d:Document {id: $id})
+            CALL {
+              WITH d
+              MATCH (d)-[:HAS_CHILD*0..]->(child:Document)
+              DETACH DELETE child
+            }
+            `,
+            { id }
+          );
+          return true;
+        } catch (error) {
+          console.error("删除文档及其子节点时出错:", error);
+          return false;
+        } finally {
+          await session.close();
+        }
+      },
     },
   },
 });
@@ -231,6 +255,7 @@ export default startServerAndCreateNextHandler(await createApolloServer(), {
       currentUser,
       token,
       jwt: decodedToken,
+      driver, // 添加这一行，确保 driver 被传递到 context 中
     };
   },
 });
