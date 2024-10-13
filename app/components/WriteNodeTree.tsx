@@ -111,6 +111,7 @@ interface WriteNodeTreeProps {
   onNodeSelect: (node: DocumentNode) => void;
   documentId: string;
   selectedNodeId: string | null;
+  onDeleteNode: (nodeId: string) => void; // 新增的删除节点回调
 }
 
 // 自定义节点组件
@@ -252,6 +253,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   onNodeSelect,
   documentId,
   selectedNodeId,
+  onDeleteNode,
 }) => {
   const { token, user } = useAuth(); // 获取用户信息
   const { showToast } = useToast();
@@ -462,21 +464,36 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    nodeId: string | null;
+    nodeId: string;
   } | null>(null);
 
-  const handleContextMenu = useCallback(
-    (event: React.MouseEvent) => {
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
-      const nodeId = selectedNodeId;
-      setContextMenu({ x: event.clientX, y: event.clientY, nodeId });
+      event.stopPropagation();
+      const pane = document.querySelector('.react-flow__pane');
+      if (pane) {
+        const rect = pane.getBoundingClientRect();
+        setContextMenu({
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+          nodeId: node.id,
+        });
+      }
     },
-    [selectedNodeId]
+    []
   );
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
+
+  const handleDeleteNode = useCallback(() => {
+    if (contextMenu) {
+      onDeleteNode(contextMenu.nodeId);
+      closeContextMenu(); // 添加这行来关闭上下文菜单
+    }
+  }, [contextMenu, onDeleteNode, closeContextMenu]);
 
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
@@ -514,7 +531,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     );
 
   return (
-    <div onContextMenu={handleContextMenu} className="relative w-full h-full">
+    <div className="h-full w-full relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -522,11 +539,10 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        proOptions={{ hideAttribution: true }}
-        className="w-full h-full"
+        onNodeContextMenu={onNodeContextMenu}
+        onClick={closeContextMenu}
         nodeTypes={{ customNode: CustomNode }}
+        fitView
       >
         <Controls>
           <ControlButton onClick={onToggleLayout} title="切换布局">
@@ -579,6 +595,9 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
             >
               添加同级节点
             </a>
+          </li>
+          <li>
+            <a onClick={handleDeleteNode}>删除节点</a>
           </li>
         </ContextMenu>
       )}

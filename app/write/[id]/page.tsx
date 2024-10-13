@@ -7,7 +7,7 @@ import {
   UPDATE_DOCUMENT,
   SEARCH_DOCUMENTS,
 } from "../../graphql/queries";
-import { PUBLISH_DOCUMENT, UNPUBLISH_DOCUMENT } from "../../graphql/mutations";
+import { PUBLISH_DOCUMENT, UNPUBLISH_DOCUMENT, DELETE_DOCUMENTS } from "../../graphql/mutations";
 import WriteNodeTree from "../../components/WriteNodeTree";
 import WriteMarkdownTree, {
   WriteMarkdownTreeRef,
@@ -120,7 +120,7 @@ export default function WritePage() {
     setTimeout(() => setToastMessage(null), 1000);
   };
 
-  const { data } = useQuery(GET_DOCUMENT, {
+  const { data, refetch } = useQuery(GET_DOCUMENT, {
     variables: { id: documentId },
     skip: !documentId || !token,
     context: {
@@ -147,6 +147,14 @@ export default function WritePage() {
   });
 
   const [unpublishDocument] = useMutation(UNPUBLISH_DOCUMENT, {
+    context: {
+      headers: {
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    },
+  });
+
+  const [deleteDocuments] = useMutation(DELETE_DOCUMENTS, {
     context: {
       headers: {
         authorization: token ? `Bearer ${token}` : "",
@@ -283,6 +291,29 @@ export default function WritePage() {
     }
   };
 
+  const handleDeleteNode = async (nodeId: string) => {
+    if (confirm('确定要删除这个节点及其所有子节点吗？')) {
+      try {
+        const response = await deleteDocuments({
+          variables: { where: { id: nodeId } },
+        });
+        if (response.data.deleteDocuments.nodesDeleted > 0) {
+          showToast('节点删除成功');
+          // 切换到父节点或根节点
+          const parentNode = data.documents.find((doc: any) => doc.children.some((child: any) => child.id === nodeId));
+          setSelectedNodeId(parentNode ? parentNode.id : data.documents[0].id);
+          // 刷新文档树
+          refetch();
+        } else {
+          showToast('节点删除失败');
+        }
+      } catch (error) {
+        console.error('删除节点时出错:', error);
+        showToast('删除节点失败，请重试');
+      }
+    }
+  };
+
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
       <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar`}>
@@ -368,6 +399,7 @@ export default function WritePage() {
                     onNodeSelect={onNodeSelect}
                     documentId={documentId}
                     selectedNodeId={selectedNodeId}
+                    onDeleteNode={handleDeleteNode} // 新增删除节点的回调
                   />
                 ) : (
                   <WriteMarkdownTree

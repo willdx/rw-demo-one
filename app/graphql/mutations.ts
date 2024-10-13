@@ -63,3 +63,11 @@ export const CREATE_SUB_DOCUMENT = gql`
     }
   }
 `;
+
+export const DELETE_DOCUMENTS = gql`
+  mutation deleteDocuments($where: DocumentWhere) {
+    deleteDocuments(where: $where) {
+      nodesDeleted
+    }
+  }
+`;
