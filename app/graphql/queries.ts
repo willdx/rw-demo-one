@@ -8,6 +8,7 @@ export const GET_DOCUMENT = gql`
       id
       fileName
       content
+      isPublished
     }
   }
 `;
@@ -99,6 +100,62 @@ export const GET_USER_ROOT_DOCUMENT = gql`
       content
       creator {
         id
+      }
+    }
+  }
+`;
+
+export const GET_DOCUMENTS = gql`
+  query Documents(
+    $where: DocumentWhere
+    $sort: [DocumentChildrenConnectionSort!]
+  ) {
+    documents(where: $where) {
+      id
+      fileName
+      content
+      isPublished
+      parent {
+        id
+      }
+      childrenConnection(sort: $sort) {
+        edges {
+          node {
+            id
+            fileName
+            content
+            isPublished
+            childrenConnection(sort: $sort) {
+              edges {
+                node {
+                  id
+                  fileName
+                  content
+                  isPublished
+                  childrenConnection(sort: $sort) {
+                    edges {
+                      node {
+                        id
+                        fileName
+                        content
+                        isPublished
+                      }
+                      properties {
+                        order
+                      }
+                    }
+                  }
+                }
+                properties {
+                  order
+                }
+              }
+            }
+          }
+          properties {
+            order
+          }
+        }
       }
     }
   }

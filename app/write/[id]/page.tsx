@@ -168,15 +168,14 @@ export default function WritePage() {
   const [isPublished, setIsPublished] = useState(false); // 添加状态管理
 
   const onNodeSelect = (node: DocumentNode) => {
+    // 格式化为react flow的格式时结构发生了变化，node类型不太一样, 这里简单兼容一下
     console.log(`onNodeSelect 被调用，selectedNode: ${JSON.stringify(node)}`);
     setSelectedNodeId(node.id);
-    setContent(node.data.content);
-    setFullContent(node.data.content);
+    setContent(node.data ? node.data.content : node.content);
+    setFullContent(node.data ? node.data.content : node.content);
     setSelectedChapterId(null); // 重置 selectedChapterId
-
     // 更新发布状态
-    console.log(`node.data.isPublished: ${node.data.isPublished}`);
-    setIsPublished(node.data.isPublished); // 直接从节点对象中获取发布状态
+    setIsPublished(node.data ? node.data.isPublished : node.isPublished);
   };
 
   const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
@@ -292,11 +291,18 @@ export default function WritePage() {
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
       <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar`}>
-        <div className={`w-full h-full flex flex-col ${leftCollapsed ? "invisible" : "visible"}`}>
+        <div
+          className={`w-full h-full flex flex-col ${
+            leftCollapsed ? "invisible" : "visible"
+          }`}
+        >
           <div className="flex flex-col border-b border-forest-border">
             <div className="flex items-center h-14 relative">
               {isSearchMode ? (
-                <form onSubmit={handleSearch} className="w-full flex items-center">
+                <form
+                  onSubmit={handleSearch}
+                  className="w-full flex items-center"
+                >
                   <input
                     type="text"
                     value={searchQuery}
@@ -304,7 +310,10 @@ export default function WritePage() {
                     placeholder="搜索文档..."
                     className="w-full px-3 py-2 ml-12 bg-forest-bg text-forest-text border border-forest-border rounded focus:outline-none focus:ring-2 focus:ring-forest-accent" // 更新样式
                   />
-                  <button type="submit" className="ml-2 p-1 bg-forest-accent text-white rounded">
+                  <button
+                    type="submit"
+                    className="ml-2 p-1 bg-forest-accent text-white rounded"
+                  >
                     <MagnifyingGlassIcon className="w-5 h-5" />
                   </button>
                   <button

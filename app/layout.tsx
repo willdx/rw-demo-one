@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./theme-provider";
 import ApolloWrapper from "./components/ApolloWrapper";
 import { AuthProvider } from "./contexts/AuthContext";
+import dynamic from 'next/dynamic';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -14,6 +15,10 @@ const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+
+const DynamicToastProvider = dynamic(() => import('./contexts/ToastContext').then(mod => mod.ToastProvider), {
+  ssr: false
 });
 
 export const metadata: Metadata = {
@@ -39,7 +44,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <ApolloWrapper>{children}</ApolloWrapper>
+            <ApolloWrapper>
+              <DynamicToastProvider>
+                {children}
+              </DynamicToastProvider>
+            </ApolloWrapper>
           </ThemeProvider>
         </AuthProvider>
       </body>

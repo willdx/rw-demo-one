@@ -21,11 +21,14 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import dagre from "dagre";
-import { useQuery, gql } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
 import { useAuth } from "../contexts/AuthContext";
 import TreeSkeleton from "./TreeSkeleton";
 import ContextMenu from "./ContextMenu";
 import Link from "next/link";
+import { CREATE_SUB_DOCUMENT } from "../graphql/mutations";
+import { useToast } from "../contexts/ToastContext";
+import { GET_DOCUMENTS } from "../graphql/queries";
 
 // 常量定义
 const NODE_WIDTH = 200;
@@ -33,64 +36,11 @@ const NODE_HEIGHT = 40;
 const HORIZONTAL_GAP = 50;
 const VERTICAL_GAP = 20;
 
-const GET_DOCUMENTS = gql`
-  query Documents(
-    $where: DocumentWhere
-    $sort: [DocumentChildrenConnectionSort!]
-  ) {
-    documents(where: $where) {
-      id
-      fileName
-      content
-      isPublished
-      childrenConnection(sort: $sort) {
-        edges {
-          node {
-            id
-            fileName
-            content
-            isPublished
-            childrenConnection(sort: $sort) {
-              edges {
-                node {
-                  id
-                  fileName
-                  content
-                  isPublished
-                  childrenConnection(sort: $sort) {
-                    edges {
-                      node {
-                        id
-                        fileName
-                        content
-                        isPublished
-                      }
-                      properties {
-                        order
-                      }
-                    }
-                  }
-                }
-                properties {
-                  order
-                }
-              }
-            }
-          }
-          properties {
-            order
-          }
-        }
-      }
-    }
-  }
-`;
-
 interface DocumentNode {
   id: string;
   fileName: string;
   content: string;
-  isPublished: boolean; // 添加 isPublished 字段
+  isPublished: boolean;
   childrenConnection?: {
     edges: Array<{
       node: DocumentNode;
@@ -147,8 +97,18 @@ const formatGraphData = (
   return { nodes, edges };
 };
 
+// 更新类型定义
+type CustomNode = Node<{
+  label: string;
+  content: string;
+  isPublished: boolean;
+  depth: number;
+  isSelected: boolean;
+  layout: "LR" | "TB";
+}>;
+
 interface WriteNodeTreeProps {
-  onNodeSelect: (node: DocumentNode) => void; // 修改为接收整个节点对象
+  onNodeSelect: (node: DocumentNode) => void;
   documentId: string;
   selectedNodeId: string | null;
 }
@@ -293,9 +253,9 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   documentId,
   selectedNodeId,
 }) => {
-  const { token } = useAuth();
-  const [isAuthChecked, setIsAuthChecked] = useState(false);
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
+  const { token, user } = useAuth(); // 获取用户信息
+  const { showToast } = useToast();
+  const [nodes, setNodes, onNodesChange] = useNodesState<CustomNode[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView } = useReactFlow();
   const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
@@ -311,10 +271,10 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     edgesRef.current = edges;
   }, [nodes, edges]);
 
-  const { loading, error, data } = useQuery(GET_DOCUMENTS, {
+  const { loading, error, data, refetch } = useQuery(GET_DOCUMENTS, {
     variables: {
       where: { id: documentId },
-      sort: [{ edge: { order: "ASC" }, node: { updatedAt: "DESC" } }],
+      sort: [{ edge: { order: "ASC" }, node: { updatedAt: "ASC" } }],
     },
     context: {
       headers: {
@@ -324,11 +284,61 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     skip: !token,
   });
 
-  useEffect(() => {
-    if (token) {
-      setIsAuthChecked(true);
-    }
-  }, [token]);
+  const [createSubDocument] = useMutation(CREATE_SUB_DOCUMENT, {
+    context: {
+      headers: {
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    },
+    update: (cache, { data: { updateDocuments } }) => {
+      const newDocument = updateDocuments.documents[0];
+      cache.modify({
+        id: cache.identify({ __typename: "Document", id: documentId }),
+        fields: {
+          childrenConnection(existingConnection = { edges: [] }) {
+            const newEdge = {
+              __typename: "DocumentEdge",
+              node: newDocument,
+              properties: { order: 1000 },
+            };
+            return {
+              ...existingConnection,
+              edges: [...existingConnection.edges, newEdge],
+            };
+          },
+        },
+      });
+    },
+  });
+
+  const handleAddNode = useCallback(
+    async (parentId: string) => {
+      if (!parentId || !user) return; // 确保有用户信息
+
+      try {
+        const { data } = await createSubDocument({
+          variables: {
+            parentId,
+            fileName: "Untitled",
+            content: "# Untitled\n",
+            creatorId: user.id, // 提供创建者 ID
+          },
+        });
+
+        const updatedNode = data.updateDocuments.documents[0];
+
+        // 重新获取文档数据
+        await refetch();
+        console.log(`### updatedNode: ${JSON.stringify(updatedNode)}`);
+        onNodeSelect(updatedNode);
+        showToast("节点添加成功", "success");
+      } catch (error) {
+        console.error("添加节点失败:", error);
+        showToast("添加节点失败，请重试", "error");
+      }
+    },
+    [createSubDocument, refetch, onNodeSelect, showToast, user]
+  );
 
   useEffect(() => {
     if (data?.documents?.length) {
@@ -385,6 +395,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
           console.log("dfsOrder:", dfsOrder);
           const nodeId = dfsOrder[newIndex];
           const node = nodes.find((n) => n.id === nodeId);
+          // 这里的formatGraphData之后的node类型和Graphql请求返回的DocumentNode类型不一样
           if (node) {
             onNodeSelect(node);
             updateNodesAndEdges(node.id);
@@ -475,6 +486,25 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     };
   }, [closeContextMenu]);
 
+  const handleAddChildNode = useCallback(() => {
+    if (selectedNodeId) {
+      handleAddNode(selectedNodeId);
+    }
+  }, [selectedNodeId, handleAddNode]);
+
+  const handleAddSiblingNode = useCallback(() => {
+    if (selectedNodeId && selectedNodeId !== documentId) {
+      const parentNode = nodes.find((node) =>
+        edges.some(
+          (edge) => edge.target === selectedNodeId && edge.source === node.id
+        )
+      );
+      if (parentNode) {
+        handleAddNode(parentNode.id);
+      }
+    }
+  }, [selectedNodeId, documentId, nodes, edges, handleAddNode]);
+
   if (loading) return <TreeSkeleton />;
   if (error)
     return (
@@ -528,15 +558,26 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
               <span>从当前节点打开</span>
             </Link>
           </li>
-          <li className="disabled">
-            <a>禁用的选项</a>
-          </li>
           <li>
-            <a onClick={() => {
-              // 处理其他操作
-              closeContextMenu();
-            }}>
-              其他操作
+            <a
+              onClick={() => {
+                handleAddChildNode();
+                closeContextMenu();
+              }}
+            >
+              添加子节点
+            </a>
+          </li>
+          <li className={selectedNodeId === documentId ? "disabled" : ""}>
+            <a
+              onClick={() => {
+                if (selectedNodeId !== documentId) {
+                  handleAddSiblingNode();
+                }
+                closeContextMenu();
+              }}
+            >
+              添加同级节点
             </a>
           </li>
         </ContextMenu>
