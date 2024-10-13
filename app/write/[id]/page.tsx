@@ -39,6 +39,7 @@ export default function WritePage() {
   const params = useParams();
   const documentId = params?.id as string;
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const selectedNodeIdRef = useRef<string | null>(null);
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -171,6 +172,7 @@ export default function WritePage() {
     // 格式化为react flow的格式时结构发生了变化，node类型不太一样, 这里简单兼容一下
     console.log(`onNodeSelect 被调用，selectedNode: ${JSON.stringify(node)}`);
     setSelectedNodeId(node.id);
+    selectedNodeIdRef.current = node.id;
     setContent(node.data ? node.data.content : node.content);
     setFullContent(node.data ? node.data.content : node.content);
     setSelectedChapterId(null); // 重置 selectedChapterId
@@ -185,11 +187,11 @@ export default function WritePage() {
 
   const debouncedUpdateDocument = useCallback(
     debounce(async (updatedFullContent: string, updatedFileName: string) => {
-      if (documentId) {
+      if (selectedNodeIdRef.current) {
         try {
           await updateDocument({
             variables: {
-              where: { id: documentId },
+              where: { id: selectedNodeIdRef.current },
               update: {
                 content: updatedFullContent,
                 fileName: updatedFileName,
@@ -200,8 +202,8 @@ export default function WritePage() {
           console.error("Error updating document:", error);
         }
       }
-    }, 2000),
-    [documentId, updateDocument]
+    }, 200),
+    [selectedNodeIdRef.current]
   );
 
   const handleContentChange = (
@@ -209,12 +211,10 @@ export default function WritePage() {
     chapterId: string | null
   ) => {
     console.log(
-      `handleContentChange 被调用，chapterId: ${chapterId}, 新内容长度: ${newContent.length}`
+      `handleContentChange 被调用，selectedNodeId: ${selectedNodeId}, chapterId: ${chapterId}, 新内容长度: ${newContent.length}`
     );
-
     let updatedFullContent = fullContentRef.current;
     let updatedFileName = fileName;
-
     if (chapterId && chapterId !== "root") {
       console.log(`更新章节内容，章节ID: ${chapterId}`);
       console.log("原始全文内容:", updatedFullContent);
@@ -232,13 +232,8 @@ export default function WritePage() {
       console.log("更新整个文档内容");
       updatedFullContent = newContent;
     }
-
     setFullContent(updatedFullContent);
     updatedFileName = extractFileName(updatedFullContent);
-
-    console.log(
-      `准备更新文档，文件名: ${updatedFileName}, 内容长度: ${updatedFullContent.length}`
-    );
     debouncedUpdateDocument(updatedFullContent, updatedFileName);
   };
 
