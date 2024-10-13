@@ -7,16 +7,14 @@ import LoginModal from "./LoginModal";
 import RegisterModal from "./RegisterModal";
 import UserMenu from "./UserMenu";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 
-export default function Header({
-  showToast,
-}: {
-  showToast: (message: string) => void;
-}) {
+export default function Header() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const { user, logout, isLoading } = useAuth();
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!isLoading) {
@@ -26,17 +24,17 @@ export default function Header({
 
   const handleLoginSuccess = () => {
     setIsLoginModalOpen(false);
-    showToast("登录成功！");
+    showToast("登录成功！", "success");
   };
 
   const handleRegisterSuccess = () => {
     setIsRegisterModalOpen(false);
-    showToast("注册成功！");
+    showToast("注册成功！", "success");
   };
 
   const handleLogout = () => {
     logout();
-    showToast("已注销！");
+    showToast("已注销！", "success");
   };
 
   return (
