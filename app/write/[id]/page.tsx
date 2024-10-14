@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useQuery, useMutation } from "@apollo/client";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useQuery, useMutation, ApolloError } from "@apollo/client";
 import {
   GET_DOCUMENT,
   UPDATE_DOCUMENT,
@@ -10,7 +10,6 @@ import {
 import {
   PUBLISH_DOCUMENT,
   UNPUBLISH_DOCUMENT,
-  DELETE_DOCUMENTS,
   DELETE_DOCUMENTS_AND_CHILDREN,
 } from "../../graphql/mutations";
 import WriteNodeTree from "../../components/WriteNodeTree";
@@ -21,7 +20,6 @@ import VditorEditor from "../../components/VditorEditor";
 import { useParams } from "next/navigation";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useToast } from "../../contexts/ToastContext";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -33,13 +31,18 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
-import {
-  parseMarkdown,
-  MarkdownNode,
-  replaceNodeContent,
-} from "../../utils/markdownUtils";
+import { replaceNodeContent } from "../../utils/markdownUtils";
 import Toast from "@/app/components/Toast";
-import SearchResults from "../../components/SearchResults";
+import SearchResults, { SearchResult } from "../../components/SearchResults";
+import { useInView } from "react-intersection-observer";
+
+// 添加 DocumentNode 类型定义
+interface DocumentNode {
+  id: string;
+  fileName: string;
+  content: string;
+  isPublished: boolean;
+}
 
 export default function WritePage() {
   const params = useParams();
@@ -64,15 +67,24 @@ export default function WritePage() {
 
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [hasMoreResults, setHasMoreResults] = useState(false);
+
+  const searchVariables = useMemo(() => ({
+    searchTerm: searchQuery,
+    first: 10
+  }), [searchQuery]);
 
   const {
     data: searchData,
     loading: searchLoading,
     error: searchError,
+    fetchMore,
   } = useQuery(SEARCH_DOCUMENTS, {
-    variables: { searchTerm: searchQuery, first: 10 },
+    variables: searchVariables,
     skip: !searchQuery,
+    fetchPolicy: "network-only",
+    nextFetchPolicy: "cache-first",
     context: {
       headers: {
         authorization: token ? `Bearer ${token}` : "",
@@ -80,46 +92,60 @@ export default function WritePage() {
     },
   });
 
-  useEffect(() => {
-    if (searchData && searchData.documentsConnection) {
-      const processedResults = searchData.documentsConnection.edges.map(
-        ({ node }) => ({
-          ...node,
-          matchedContent: highlightSearchResult(node.content, searchQuery),
-        })
-      );
-      setSearchResults(processedResults);
-    }
-  }, [searchData, searchQuery]);
-
-  // 添加高亮搜索结果的函数
-  const highlightSearchResult = (content: string, query: string) => {
-    const regex = new RegExp(`(${query})`, "gi");
-    const words = content.split(" ");
-    const matchIndex = words.findIndex((word) => regex.test(word));
-
-    if (matchIndex === -1) return content.slice(0, 200) + "...";
-
-    const start = Math.max(0, matchIndex - 5);
-    const end = Math.min(words.length, matchIndex + 15);
-    let excerpt = words.slice(start, end).join(" ");
-
-    if (start > 0) excerpt = "..." + excerpt;
-    if (end < words.length) excerpt += "...";
-
-    return excerpt.replace(regex, "<mark>$1</mark>");
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // 搜索查询已经过 useQuery 自动触发��这里不需要额外的操作
-  };
-
-  const handleSearchResultClick = (result: SearchResult) => {
+  const handleSearchResultClick = useCallback((result: SearchResult) => {
     setContent(result.content);
     setSelectedNodeId(result.id);
     setIsSearchMode(false);
-  };
+  }, []);
+
+  const handleLoadMore = useCallback(() => {
+    if (searchData?.documentsConnection?.pageInfo?.endCursor) {
+      fetchMore({
+        variables: {
+          ...searchVariables,
+          after: searchData.documentsConnection.pageInfo.endCursor,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult) return prev;
+          return {
+            documentsConnection: {
+              ...fetchMoreResult.documentsConnection,
+              edges: [
+                ...prev.documentsConnection.edges,
+                ...fetchMoreResult.documentsConnection.edges,
+              ],
+            },
+          };
+        },
+      });
+    }
+  }, [searchData, fetchMore, searchVariables]);
+
+  useEffect(() => {
+    if (searchData && searchData.documentsConnection) {
+      const processedResults = searchData.documentsConnection.edges.map(
+        ({ node }: { node: any }) => ({
+          ...node,
+          matchedContent: highlightSearchResult(node.content, searchQuery),
+          updatedAt: node.updatedAt, // 确保包含 updatedAt 字段
+        })
+      );
+      setSearchResults(prevResults => {
+        if (searchData.documentsConnection.pageInfo.startCursor === searchData.documentsConnection.pageInfo.endCursor) {
+          return processedResults;
+        }
+        return [...prevResults, ...processedResults];
+      });
+      setHasMoreResults(searchData.documentsConnection.pageInfo.hasNextPage);
+    }
+  }, [searchData, searchQuery]);
+
+  const handleSearch = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    // 重置搜索结果
+    setSearchResults([]);
+    // 不需要手动触发查询，因为 searchQuery 的变化会自动触发新的查询
+  }, []);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -153,14 +179,6 @@ export default function WritePage() {
   });
 
   const [unpublishDocument] = useMutation(UNPUBLISH_DOCUMENT, {
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    },
-  });
-
-  const [deleteDocuments] = useMutation(DELETE_DOCUMENTS, {
     context: {
       headers: {
         authorization: token ? `Bearer ${token}` : "",
@@ -282,10 +300,10 @@ export default function WritePage() {
         setIsPublished(true); // 更新发布状态
       } catch (error) {
         console.error("发布文档时出错:", error);
-        showToast("发布文档失败，请重试。"); // 使用 showToast 显示消息
+        showToast("发布文档失，请重试。"); // 使用 showToast 显示消息
       }
     } else {
-      console.warn("没有选中的节点ID，无法发布文档���");
+      console.warn("没有选中的节点ID，无法发布文档。");
     }
   };
 
@@ -317,10 +335,6 @@ export default function WritePage() {
       console.log("Delete response:", response);
       if (response.data.deleteDocumentsAndChildren) {
         showToast("节点删除成功");
-        // 切换到父节点或根节点
-        // const parentNode = data.documents.find((doc) => doc.children.some((child) => child.id === nodeId));
-        // setSelectedNodeId(parentNode ? parentNode.id : data.documents[0].id);
-        // 刷新文档树
         refetch();
       } else {
         showToast("节点删除失败");
@@ -330,6 +344,35 @@ export default function WritePage() {
       showToast("删除节点失败，请重试");
     }
   };
+
+  // 添加高亮搜索结果的函数
+  const highlightSearchResult = (content: string, query: string) => {
+    const regex = new RegExp(`(${query})`, "gi");
+    const words = content.split(" ");
+    const matchIndex = words.findIndex((word) => regex.test(word));
+
+    if (matchIndex === -1) return content.slice(0, 200) + "...";
+
+    const start = Math.max(0, matchIndex - 5);
+    const end = Math.min(words.length, matchIndex + 15);
+    let excerpt = words.slice(start, end).join(" ");
+
+    if (start > 0) excerpt = "..." + excerpt;
+    if (end < words.length) excerpt += "...";
+
+    return excerpt.replace(regex, "<mark>$1</mark>");
+  };
+
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: '100px',
+  });
+
+  useEffect(() => {
+    if (inView && hasMoreResults && !searchLoading) {
+      handleLoadMore();
+    }
+  }, [inView, hasMoreResults, searchLoading, handleLoadMore]);
 
   return (
     <div className="h-screen flex relative overflow-hidden bg-forest-bg text-forest-text">
@@ -401,14 +444,17 @@ export default function WritePage() {
               {/* 移除下划线 */}
             </div>
           </div>
-          <div className="flex-grow overflow-hidden p-2">
+          <div className="h-full overflow-y-auto">
             {isSearchMode ? (
-              <SearchResults
-                results={searchResults}
-                loading={searchLoading}
-                error={searchError}
-                onResultClick={handleSearchResultClick}
-              />
+              <div className="h-full overflow-y-auto">
+                <SearchResults
+                  results={searchResults}
+                  loading={searchLoading}
+                  error={searchError as Error | null}
+                  onResultClick={handleSearchResultClick}
+                />
+                {hasMoreResults && <div ref={ref} style={{ height: 1 }} />}
+              </div>
             ) : (
               <ReactFlowProvider>
                 {activeTab === "node" ? (

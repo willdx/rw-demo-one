@@ -312,13 +312,16 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     },
   });
 
-  const [deleteDocumentsAndChildren] = useMutation(DELETE_DOCUMENTS_AND_CHILDREN, {
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
+  const [deleteDocumentsAndChildren] = useMutation(
+    DELETE_DOCUMENTS_AND_CHILDREN,
+    {
+      context: {
+        headers: {
+          authorization: token ? `Bearer ${token}` : "",
+        },
       },
-    },
-  });
+    }
+  );
 
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -371,7 +374,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   // 在useEffect中计算深度优先遍历顺序
   useEffect(() => {
     if (nodes.length > 0 && edges.length > 0) {
-      const order = dfsTraversal(nodes, edges);
+      const order = dfsTraversal(nodes as Node[], edges);
       setDfsOrder(order);
       setCurrentDfsIndex(order.findIndex((id) => id === selectedNodeId) || 0);
     }
@@ -386,7 +389,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
         }))
       );
       setEdges((eds) =>
-        updateEdgeStylesOnNodeClick(newSelectedNodeId, nodes, eds)
+        updateEdgeStylesOnNodeClick(newSelectedNodeId, nodes as Node[], eds)
       );
     },
     [nodes, setNodes, setEdges]
@@ -520,18 +523,20 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
           variables: { id: nodeToDelete },
         });
         if (response.data.deleteDocumentsAndChildren) {
-          showToast("节点删除成功");
+          showToast("节点删除成功", "success");
           await refetch();
         } else {
-          showToast("节点删除失败");
+          showToast("节点删除失败", "error");
         }
       } catch (error) {
         console.error("删除节点时出错:", error);
-        showToast("删除节点失败，请重试");
+        showToast("删除节点失败，请重试", "error");
       } finally {
         setIsDeleting(false);
         setNodeToDelete(null);
-        const modal = document.getElementById("delete-confirm-modal") as HTMLDialogElement;
+        const modal = document.getElementById(
+          "delete-confirm-modal"
+        ) as HTMLDialogElement;
         if (modal) {
           modal.close();
         }
@@ -657,14 +662,18 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
               className="btn"
               onClick={() => {
                 setNodeToDelete(null);
-                (document.getElementById("delete-confirm-modal") as HTMLDialogElement).close();
+                (
+                  document.getElementById(
+                    "delete-confirm-modal"
+                  ) as HTMLDialogElement
+                ).close();
               }}
               disabled={isDeleting}
             >
               取消
             </button>
-            <button 
-              className={`btn btn-primary ${isDeleting ? 'loading' : ''}`} 
+            <button
+              className={`btn btn-primary ${isDeleting ? "loading" : ""}`}
               onClick={confirmDelete}
               disabled={isDeleting}
             >
