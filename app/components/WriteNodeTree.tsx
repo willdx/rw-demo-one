@@ -272,7 +272,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     edgesRef.current = edges;
   }, [nodes, edges]);
 
-  const [queryDepth, setQueryDepth] = useState(2);
+  const [queryDepth, setQueryDepth] = useState(3);
 
   const GET_DOCUMENTS = useMemo(() => createGetDocumentsQuery(queryDepth), [queryDepth]);
 
@@ -586,7 +586,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     debouncedRefetch();
   }, [queryDepth, debouncedRefetch]);
 
-  const handleDepthChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDepthChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newDepth = parseInt(event.target.value, 10);
     setQueryDepth(newDepth);
   };
@@ -602,15 +602,19 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   return (
     <div className="h-full w-full relative">
       <div className="absolute top-0 left-0 z-10 m-2">
-        <input
-          type="range"
-          min="1"
-          max="30"
-          value={queryDepth}
-          onChange={handleDepthChange}
-          className="range range-xs range-primary"
-        />
-        <span className="ml-2 text-sm">{queryDepth}</span>
+        <div className="tooltip tooltip-bottom" data-tip="获取几层">
+          <select
+            value={queryDepth}
+            onChange={handleDepthChange}
+            className="select select-bordered select-sm w-full max-w-xs"
+          >
+            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((depth) => (
+              <option key={depth} value={depth}>
+                {depth}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <ReactFlow
         nodes={nodes}
