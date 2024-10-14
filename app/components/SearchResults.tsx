@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 export interface SearchResult {
   id: string;
@@ -34,17 +35,29 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       {results.map((result) => (
         <div
           key={result.id}
-          className="p-4 bg-forest-bg border border-forest-border rounded-md cursor-pointer hover:bg-forest-hover"
+          className="p-4 bg-forest-bg border border-forest-border rounded-md hover:bg-forest-hover cursor-pointer"
           onClick={() => onResultClick(result)}
         >
-          <h3 className="text-lg font-semibold mb-2">{result.fileName}</h3>
-          <p 
-            className="text-sm text-forest-text-light"
-            dangerouslySetInnerHTML={{ __html: result.matchedContent }}
-          />
-          <p className="text-xs text-forest-text-light mt-2">
-            最后更新: {formatDate(result.updatedAt)}
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">{result.fileName}</h3>
+              <p 
+                className="text-sm text-forest-text-light"
+                dangerouslySetInnerHTML={{ __html: result.matchedContent }}
+              />
+              <p className="text-xs text-forest-text-light mt-2">
+                最后更新: {formatDate(result.updatedAt)}
+              </p>
+            </div>
+            <Link href={`/write/${result.id}`} passHref>
+              <button 
+                className="btn btn-sm btn-outline"
+                onClick={(e) => e.stopPropagation()} // 防止触发卡片的点击事件
+              >
+                打开
+              </button>
+            </Link>
+          </div>
         </div>
       ))}
       {loading && (

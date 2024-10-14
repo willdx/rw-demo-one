@@ -95,8 +95,8 @@ export default function WritePage() {
   const handleSearchResultClick = useCallback((result: SearchResult) => {
     setContent(result.content);
     setSelectedNodeId(result.id);
-    setIsSearchMode(false);
-  }, []);
+    // 移除 setIsSearchMode(false);，这样点击"查看"按钮不会关闭搜索模式
+  }, [setContent, setSelectedNodeId]);
 
   const handleLoadMore = useCallback(() => {
     if (searchData?.documentsConnection?.pageInfo?.endCursor) {
