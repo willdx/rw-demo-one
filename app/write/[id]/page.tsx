@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useQuery, useMutation, ApolloError } from "@apollo/client";
 import {
   GET_DOCUMENT,
@@ -70,10 +76,13 @@ export default function WritePage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [hasMoreResults, setHasMoreResults] = useState(false);
 
-  const searchVariables = useMemo(() => ({
-    searchTerm: searchQuery,
-    first: 10
-  }), [searchQuery]);
+  const searchVariables = useMemo(
+    () => ({
+      searchTerm: searchQuery,
+      first: 10,
+    }),
+    [searchQuery]
+  );
 
   const {
     data: searchData,
@@ -92,11 +101,14 @@ export default function WritePage() {
     },
   });
 
-  const handleSearchResultClick = useCallback((result: SearchResult) => {
-    setContent(result.content);
-    setSelectedNodeId(result.id);
-    // 移除 setIsSearchMode(false);，这样点击"查看"按钮不会关闭搜索模式
-  }, [setContent, setSelectedNodeId]);
+  const handleSearchResultClick = useCallback(
+    (result: SearchResult) => {
+      setContent(result.content);
+      setSelectedNodeId(result.id);
+      // 移除 setIsSearchMode(false);，这样点击"查看"按钮不会关闭搜索模式
+    },
+    [setContent, setSelectedNodeId]
+  );
 
   const handleLoadMore = useCallback(() => {
     if (searchData?.documentsConnection?.pageInfo?.endCursor) {
@@ -130,8 +142,11 @@ export default function WritePage() {
           updatedAt: node.updatedAt, // 确保包含 updatedAt 字段
         })
       );
-      setSearchResults(prevResults => {
-        if (searchData.documentsConnection.pageInfo.startCursor === searchData.documentsConnection.pageInfo.endCursor) {
+      setSearchResults((prevResults) => {
+        if (
+          searchData.documentsConnection.pageInfo.startCursor ===
+          searchData.documentsConnection.pageInfo.endCursor
+        ) {
           return processedResults;
         }
         return [...prevResults, ...processedResults];
@@ -365,7 +380,7 @@ export default function WritePage() {
 
   const { ref, inView } = useInView({
     threshold: 0,
-    rootMargin: '100px',
+    rootMargin: "100px",
   });
 
   useEffect(() => {

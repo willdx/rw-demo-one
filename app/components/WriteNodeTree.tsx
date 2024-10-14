@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { debounce } from "lodash";
 import {
   ReactFlow,
@@ -28,7 +28,7 @@ import ContextMenu from "./ContextMenu";
 import Link from "next/link";
 import { CREATE_SUB_DOCUMENT } from "../graphql/mutations";
 import { useToast } from "../contexts/ToastContext";
-import { GET_DOCUMENTS } from "../graphql/queries";
+import { createGetDocumentsQuery } from "../graphql/queries";
 import { DELETE_DOCUMENTS_AND_CHILDREN } from "../graphql/mutations";
 
 // 常量定义
@@ -271,6 +271,10 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     nodesRef.current = nodes;
     edgesRef.current = edges;
   }, [nodes, edges]);
+
+  const [queryDepth, setQueryDepth] = useState(2);
+
+  const GET_DOCUMENTS = useMemo(() => createGetDocumentsQuery(queryDepth), [queryDepth]);
 
   const { loading, error, data, refetch } = useQuery(GET_DOCUMENTS, {
     variables: {
@@ -571,6 +575,22 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     }
   }, [selectedNodeId, documentId, nodes, edges, handleAddNode]);
 
+  const debouncedRefetch = useCallback(
+    debounce(() => {
+      refetch();
+    }, 500),
+    [refetch]
+  );
+
+  useEffect(() => {
+    debouncedRefetch();
+  }, [queryDepth, debouncedRefetch]);
+
+  const handleDepthChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newDepth = parseInt(event.target.value, 10);
+    setQueryDepth(newDepth);
+  };
+
   if (loading) return <TreeSkeleton />;
   if (error)
     return (
@@ -581,6 +601,17 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
   return (
     <div className="h-full w-full relative">
+      <div className="absolute top-0 left-0 z-10 m-2">
+        <input
+          type="range"
+          min="1"
+          max="30"
+          value={queryDepth}
+          onChange={handleDepthChange}
+          className="range range-xs range-primary"
+        />
+        <span className="ml-2 text-sm">{queryDepth}</span>
+      </div>
       <ReactFlow
         nodes={nodes}
         edges={edges}

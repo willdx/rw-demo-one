@@ -106,58 +106,42 @@ export const GET_USER_ROOT_DOCUMENT = gql`
   }
 `;
 
-export const GET_DOCUMENTS = gql`
+const generateChildrenConnection = (depth: number): string => {
+  if (depth <= 0) return "";
+
+  return `
+    childrenConnection(sort: $sort) {
+      edges {
+        node {
+          ...DocumentFields
+          ${depth > 1 ? generateChildrenConnection(depth - 1) : ""}
+        }
+        properties {
+          order
+        }
+      }
+    }
+  `;
+};
+
+export const createGetDocumentsQuery = (maxDepth: number) => gql`
+  fragment DocumentFields on Document {
+    id
+    fileName
+    content
+    isPublished
+    parent {
+      id
+    }
+  }
+
   query Documents(
     $where: DocumentWhere
     $sort: [DocumentChildrenConnectionSort!]
   ) {
     documents(where: $where) {
-      id
-      fileName
-      content
-      isPublished
-      parent {
-        id
-      }
-      childrenConnection(sort: $sort) {
-        edges {
-          node {
-            id
-            fileName
-            content
-            isPublished
-            childrenConnection(sort: $sort) {
-              edges {
-                node {
-                  id
-                  fileName
-                  content
-                  isPublished
-                  childrenConnection(sort: $sort) {
-                    edges {
-                      node {
-                        id
-                        fileName
-                        content
-                        isPublished
-                      }
-                      properties {
-                        order
-                      }
-                    }
-                  }
-                }
-                properties {
-                  order
-                }
-              }
-            }
-          }
-          properties {
-            order
-          }
-        }
-      }
+      ...DocumentFields
+      ${generateChildrenConnection(maxDepth - 1)}
     }
   }
 `;
