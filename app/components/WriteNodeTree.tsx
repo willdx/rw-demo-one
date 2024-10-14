@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+} from "react";
 import { debounce } from "lodash";
 import {
   ReactFlow,
@@ -274,7 +280,10 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
   const [queryDepth, setQueryDepth] = useState(3);
 
-  const GET_DOCUMENTS = useMemo(() => createGetDocumentsQuery(queryDepth), [queryDepth]);
+  const GET_DOCUMENTS = useMemo(
+    () => createGetDocumentsQuery(queryDepth),
+    [queryDepth]
+  );
 
   const { loading, error, data, refetch } = useQuery(GET_DOCUMENTS, {
     variables: {
@@ -602,7 +611,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   return (
     <div className="h-full w-full relative">
       <div className="absolute top-0 left-0 z-10 m-2">
-        <div className="tooltip tooltip-bottom" data-tip="获取几层">
+        <div className="tooltip tooltip-bottom" data-tip="切换深度">
           <select
             value={queryDepth}
             onChange={handleDepthChange}
