@@ -23,6 +23,7 @@ import {
   Connection,
   addEdge,
   BackgroundVariant,
+  XYPosition,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
@@ -283,7 +284,8 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const { showToast } = useToast();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
-  const { fitView, getNode, getNodes, getEdges } = useReactFlow();
+  const { fitView, getNode, getNodes, getEdges, getIntersectingNodes } =
+    useReactFlow();
   const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
     "auto"
   );
@@ -632,43 +634,99 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     setQueryDepth(newDepth);
   };
 
-  const handleNodeMove = async (node: Node, newParentId: string) => {
-    const oldParentId = node?.parent?.id;
-    console.log(`handleNodeMove 被调用，node: ${JSON.stringify(node)}`);
-    console.log(`oldParentId: ${oldParentId}, newParentId: ${newParentId}`);
+  // 添加新的状态来跟踪拖动和可能的目标节点
+  const [draggedNode, setDraggedNode] = useState<Node | null>(null);
+  const [possibleTargets, setPossibleTargets] = useState<string[]>([]);
 
-    try {
-      if (oldParentId === newParentId) {
-        throw new Error("无法移动到自己");
-      }
-      await changeDocumentParent({
-        variables: { nodeId: node.id, oldParentId, newParentId },
-      });
+  // 更新 onNodeDragStart 处理函数
+  const onNodeDragStart = useCallback((event: React.MouseEvent, node: Node) => {
+    setDraggedNode(node);
+  }, []);
 
-      showToast("节点位置更新成功", "success");
-      refetch();
-    } catch (error) {
-      console.error("更新节点位置失败:", error);
-      showToast("更新节点位置失败，请重试", "error");
-    }
-  };
-
-  const onNodeDragStop = useCallback(
+  // 更新 onNodeDrag 处理函数
+  const onNodeDrag = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      const allNodes = getNodes();
-      const intersectingNodes = allNodes.filter(
-        (n) => n.id !== node.id && isIntersecting(node, n)
-      );
-      const targetNode = intersectingNodes[0]; // 获取第一个相交的节点
+      if (!draggedNode) return;
 
-      if (targetNode) {
-        handleNodeMove(node, targetNode.id);
-      } else {
-        console.log("No target node found");
+      const intersectingNodes = getIntersectingNodes(node);
+      const possibleTargetIds = intersectingNodes
+        .filter((n) => n.id !== node.id && n.id !== node?.parent?.id)
+        .map((n) => n.id);
+
+      setPossibleTargets(possibleTargetIds);
+    },
+    [draggedNode, getIntersectingNodes]
+  );
+
+  // 更新 handleNodeMove 函数
+  const handleNodeMove = useCallback(
+    async (node: Node, newParentId: string) => {
+      const oldParentId = node?.parent?.id;
+      console.log(`handleNodeMove 被调用，node: ${JSON.stringify(node)}`);
+      console.log(`oldParentId: ${oldParentId}, newParentId: ${newParentId}`);
+
+      if (oldParentId === newParentId) {
+        console.log("节点未发生移动");
+        return;
+      }
+
+      try {
+        await changeDocumentParent({
+          variables: { nodeId: node.id, oldParentId, newParentId },
+        });
+
+        showToast("节点位置更新成功", "success");
+        refetch();
+      } catch (error) {
+        console.error("更新节点位置失败:", error);
+        showToast("更新节点位置失败，请重试", "error");
       }
     },
-    [getNodes, handleNodeMove]
+    [changeDocumentParent, showToast, refetch]
   );
+
+  // 更新 onNodeDragStop 处理函数
+  const onNodeDragStop = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (!draggedNode) return;
+
+      const intersectingNodes = getIntersectingNodes(node);
+      const newParentNode = intersectingNodes.find(
+        (n) => n.id !== node.id && n.id !== node?.parent?.id
+      );
+
+      if (newParentNode) {
+        handleNodeMove(node, newParentNode.id);
+      }
+
+      setDraggedNode(null);
+      setPossibleTargets([]);
+    },
+    [draggedNode, getIntersectingNodes, handleNodeMove]
+  );
+
+  // 更新节点样式的函数
+  const getNodeStyle = useCallback(
+    (node: Node) => {
+      if (possibleTargets.includes(node.id)) {
+        return {
+          ...node.style,
+          backgroundColor: "rgba(66, 185, 131, 0.2)",
+          borderColor: "#42b983",
+        };
+      }
+      return node.style;
+    },
+    [possibleTargets]
+  );
+
+  // 更新节点数据
+  const updatedNodes = useMemo(() => {
+    return nodesRef.current.map((node) => ({
+      ...node,
+      style: getNodeStyle(node),
+    }));
+  }, [nodesRef, getNodeStyle]);
 
   if (loading) return <TreeSkeleton />;
   if (error)
@@ -706,6 +764,8 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
         onClick={closeContextMenu}
         nodeTypes={{ customNode: CustomNode }}
         fitView
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
       >
         <Controls>
