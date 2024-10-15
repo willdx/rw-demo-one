@@ -23,7 +23,7 @@ import {
   Connection,
   addEdge,
   BackgroundVariant,
-  XYPosition,
+  NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
@@ -126,44 +126,37 @@ interface WriteNodeTreeProps {
   selectedNodeId: string | null;
 }
 
-// 自定义节点组件
-const CustomNode: React.FC<{
-  data: {
-    label: string;
-    depth: number;
-    isSelected: boolean;
-    layout: "LR" | "TB";
-  };
-}> = ({ data }) => (
-  <>
-    <div
-      className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
-        data.depth === 0
-          ? "bg-forest-accent border-2 border-forest-accent"
-          : data.isSelected
-          ? "bg-forest-accent/10 border-2 border-forest-accent"
-          : "bg-white border-2 border-forest-border"
+// 更新 CustomNode 组件
+const CustomNode: React.FC<NodeProps> = ({ data, isConnectable }) => (
+  <div
+    className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
+      data.depth === 0
+        ? "bg-forest-accent border-2 border-forest-accent"
+        : data.isSelected
+        ? "bg-forest-accent/10 border-2 border-forest-accent"
+        : "bg-white border-2 border-forest-border"
+    } ${data.isDragging ? "scale-105 shadow-lg" : ""} ${
+      data.isPossibleTarget ? "ring-2 ring-forest-accent" : ""
+    }`}
+  >
+    <span
+      className={`text-sm font-medium ${
+        data.depth === 0 ? "text-white font-bold" : "text-forest-text"
       }`}
     >
-      <span
-        className={`text-sm font-medium ${
-          data.depth === 0 ? "text-white font-bold" : "text-forest-text"
-        }`}
-      >
-        {data.label}
-      </span>
-    </div>
+      {data.label}
+    </span>
     <Handle
       type="target"
       position={data.layout === "LR" ? Position.Left : Position.Top}
-      className="w-3 h-3 bg-forest-accent"
+      isConnectable={isConnectable}
     />
     <Handle
       type="source"
       position={data.layout === "LR" ? Position.Right : Position.Bottom}
-      className="w-3 h-3 bg-forest-accent"
+      isConnectable={isConnectable}
     />
-  </>
+  </div>
 );
 
 // 更新边样
@@ -282,13 +275,10 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 }) => {
   const { token, user } = useAuth();
   const { showToast } = useToast();
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
-  const { fitView, getNode, getNodes, getEdges, getIntersectingNodes } =
-    useReactFlow();
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
-    "auto"
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const { fitView, getIntersectingNodes } = useReactFlow();
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
 
   // 使用 useRef 来存储最新的 nodes 和 edges
   const nodesRef = useRef(nodes);
@@ -641,7 +631,13 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   // 更新 onNodeDragStart 处理函数
   const onNodeDragStart = useCallback((event: React.MouseEvent, node: Node) => {
     setDraggedNode(node);
-  }, []);
+    setNodes((nds) =>
+      nds.map((n) => ({
+        ...n,
+        data: { ...n.data, isDragging: n.id === node.id },
+      }))
+    );
+  }, [setNodes]);
 
   // 更新 onNodeDrag 处理函数
   const onNodeDrag = useCallback(
@@ -650,12 +646,18 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
       const intersectingNodes = getIntersectingNodes(node);
       const possibleTargetIds = intersectingNodes
-        .filter((n) => n.id !== node.id && n.id !== node?.parent?.id)
+        .filter((n) => n.id !== node.id && n.id !== node.parentNode)
         .map((n) => n.id);
 
       setPossibleTargets(possibleTargetIds);
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, isPossibleTarget: possibleTargetIds.includes(n.id) },
+        }))
+      );
     },
-    [draggedNode, getIntersectingNodes]
+    [draggedNode, getIntersectingNodes, setNodes]
   );
 
   // 更新 handleNodeMove 函数
@@ -692,7 +694,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
       const intersectingNodes = getIntersectingNodes(node);
       const newParentNode = intersectingNodes.find(
-        (n) => n.id !== node.id && n.id !== node?.parent?.id
+        (n) => n.id !== node.id && n.id !== node.parentNode
       );
 
       if (newParentNode) {
@@ -701,32 +703,15 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
       setDraggedNode(null);
       setPossibleTargets([]);
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, isDragging: false, isPossibleTarget: false },
+        }))
+      );
     },
-    [draggedNode, getIntersectingNodes, handleNodeMove]
+    [draggedNode, getIntersectingNodes, handleNodeMove, setNodes]
   );
-
-  // 更新节点样式的函数
-  const getNodeStyle = useCallback(
-    (node: Node) => {
-      if (possibleTargets.includes(node.id)) {
-        return {
-          ...node.style,
-          backgroundColor: "rgba(66, 185, 131, 0.2)",
-          borderColor: "#42b983",
-        };
-      }
-      return node.style;
-    },
-    [possibleTargets]
-  );
-
-  // 更新节点数据
-  const updatedNodes = useMemo(() => {
-    return nodesRef.current.map((node) => ({
-      ...node,
-      style: getNodeStyle(node),
-    }));
-  }, [nodesRef, getNodeStyle]);
 
   if (loading) return <TreeSkeleton />;
   if (error)
