@@ -30,6 +30,17 @@ export const UNPUBLISH_DOCUMENT = gql`
   }
 `;
 
+export const UPDATE_DOCUMENT_FILENAME = gql`
+  mutation UpdateDocumentFileName($id: ID!, $fileName: String!) {
+    updateDocuments(where: { id: $id }, update: { fileName: $fileName }) {
+      documents {
+        id
+        fileName
+      }
+    }
+  }
+`;
+
 export const CREATE_SUB_DOCUMENT = gql`
   mutation CreateSubDocument(
     $parentId: ID!
@@ -76,5 +87,26 @@ export const DELETE_DOCUMENTS = gql`
 export const DELETE_DOCUMENTS_AND_CHILDREN = gql`
   mutation DeleteDocumentsAndChildren($id: ID!) {
     deleteDocumentsAndChildren(id: $id)
+  }
+`;
+
+export const CHANGE_DOCUMENT_PARENT = gql`
+  mutation ChangeDocumentParent(
+    $nodeId: ID!
+    $oldParentId: ID!
+    $newParentId: ID!
+  ) {
+    updateDocuments(
+      where: { id: $nodeId }
+      disconnect: { parent: { where: { node: { id: $oldParentId } } } }
+      connect: { parent: { where: { node: { id: $newParentId } } } }
+    ) {
+      documents {
+        id
+        fileName
+        content
+        isPublished
+      }
+    }
   }
 `;

@@ -57,7 +57,7 @@ const typeDefs = gql`
     @authentication(operations: [CREATE, READ, UPDATE, DELETE])
 
   type ChildOrder @relationshipProperties {
-    order: Float!
+    order: Float
   }
 
   type Mutation {

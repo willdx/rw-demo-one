@@ -32,10 +32,13 @@ import { useAuth } from "../contexts/AuthContext";
 import TreeSkeleton from "./TreeSkeleton";
 import ContextMenu from "./ContextMenu";
 import Link from "next/link";
-import { CREATE_SUB_DOCUMENT } from "../graphql/mutations";
+import {
+  CREATE_SUB_DOCUMENT,
+  CHANGE_DOCUMENT_PARENT,
+  DELETE_DOCUMENTS_AND_CHILDREN,
+} from "../graphql/mutations";
 import { useToast } from "../contexts/ToastContext";
 import { createGetDocumentsQuery } from "../graphql/queries";
-import { DELETE_DOCUMENTS_AND_CHILDREN } from "../graphql/mutations";
 
 // 常量定义
 const NODE_WIDTH = 200;
@@ -69,18 +72,20 @@ const formatGraphData = (
   const processNode = (node: DocumentNode, depth: number = 0) => {
     const nodeId = node.id;
     nodes.push({
-      id: nodeId,
-      type: "customNode",
-      data: {
-        label: node.fileName,
-        content: node.content,
-        isPublished: node.isPublished,
-        depth,
-        isSelected: false,
-        layout,
+      ...node,
+      ...{
+        type: "customNode",
+        data: {
+          label: node.fileName,
+          content: node.content,
+          // isPublished: node.isPublished,
+          depth,
+          isSelected: false,
+          layout,
+        },
+        position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
+        style: { width: NODE_WIDTH },
       },
-      position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
-      style: { width: NODE_WIDTH },
     });
 
     yOffset += NODE_HEIGHT + VERTICAL_GAP;
@@ -255,16 +260,30 @@ const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
   return result;
 };
 
+const isIntersecting = (node1: Node, node2: Node) => {
+  const n1 = node1.position;
+  const n2 = node2.position;
+  const nodeWidth = NODE_WIDTH; // 假设所有节点宽度相同
+  const nodeHeight = NODE_HEIGHT; // 假设所有节点高度相同
+
+  return !(
+    n2.x > n1.x + nodeWidth ||
+    n2.x + nodeWidth < n1.x ||
+    n2.y > n1.y + nodeHeight ||
+    n2.y + nodeHeight < n1.y
+  );
+};
+
 const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   onNodeSelect,
   documentId,
   selectedNodeId,
 }) => {
-  const { token, user } = useAuth(); // 获取用户信息
+  const { token, user } = useAuth();
   const { showToast } = useToast();
-  const [nodes, setNodes, onNodesChange] = useNodesState<CustomNode[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
-  const { fitView } = useReactFlow();
+  const { fitView, getNode, getNodes, getEdges } = useReactFlow();
   const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
     "auto"
   );
@@ -288,7 +307,12 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const { loading, error, data, refetch } = useQuery(GET_DOCUMENTS, {
     variables: {
       where: { id: documentId },
-      sort: [{ edge: { order: "ASC" }, node: { updatedAt: "ASC" } }],
+      sort: [
+        {
+          node: { fileName: "ASC", updatedAt: "ASC" },
+          edge: { order: "ASC" },
+        },
+      ],
     },
     context: {
       headers: {
@@ -337,6 +361,14 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   );
 
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [changeDocumentParent] = useMutation(CHANGE_DOCUMENT_PARENT, {
+    context: {
+      headers: {
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    },
+  });
 
   const handleAddNode = useCallback(
     async (parentId: string) => {
@@ -600,6 +632,44 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     setQueryDepth(newDepth);
   };
 
+  const handleNodeMove = async (node: Node, newParentId: string) => {
+    const oldParentId = node?.parent?.id;
+    console.log(`handleNodeMove 被调用，node: ${JSON.stringify(node)}`);
+    console.log(`oldParentId: ${oldParentId}, newParentId: ${newParentId}`);
+
+    try {
+      if (oldParentId === newParentId) {
+        throw new Error("无法移动到自己");
+      }
+      await changeDocumentParent({
+        variables: { nodeId: node.id, oldParentId, newParentId },
+      });
+
+      showToast("节点位置更新成功", "success");
+      refetch();
+    } catch (error) {
+      console.error("更新节点位置失败:", error);
+      showToast("更新节点位置失败，请重试", "error");
+    }
+  };
+
+  const onNodeDragStop = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      const allNodes = getNodes();
+      const intersectingNodes = allNodes.filter(
+        (n) => n.id !== node.id && isIntersecting(node, n)
+      );
+      const targetNode = intersectingNodes[0]; // 获取第一个相交的节点
+
+      if (targetNode) {
+        handleNodeMove(node, targetNode.id);
+      } else {
+        console.log("No target node found");
+      }
+    },
+    [getNodes, handleNodeMove]
+  );
+
   if (loading) return <TreeSkeleton />;
   if (error)
     return (
@@ -636,6 +706,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
         onClick={closeContextMenu}
         nodeTypes={{ customNode: CustomNode }}
         fitView
+        onNodeDragStop={onNodeDragStop}
       >
         <Controls>
           <ControlButton onClick={onToggleLayout} title="切换布局">
