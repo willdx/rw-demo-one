@@ -38,9 +38,9 @@ import {
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
 import { replaceNodeContent } from "../../utils/markdownUtils";
-import Toast from "@/app/components/Toast";
 import SearchResults, { SearchResult } from "../../components/SearchResults";
 import { useInView } from "react-intersection-observer";
+import { useToast } from "../../contexts/ToastContext";
 
 // 添加 DocumentNode 类型定义
 interface DocumentNode {
@@ -69,7 +69,7 @@ export default function WritePage() {
   );
   const writeMarkdownTreeRef = useRef<WriteMarkdownTreeRef>(null);
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,11 +161,6 @@ export default function WritePage() {
     setSearchResults([]);
     // 不需要手动触发查询，因为 searchQuery 的变化会自动触发新的查询
   }, []);
-
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 1000);
-  };
 
   const { data, refetch } = useQuery(GET_DOCUMENT, {
     variables: { id: documentId },
@@ -311,11 +306,11 @@ export default function WritePage() {
           variables: { id: selectedNodeId },
         });
         console.log("发布成功，响应:", response);
-        showToast("文档已成功发布！"); // 使用 showToast 显示消息
-        setIsPublished(true); // 更新发布状态
+        showToast("文档已成功发布！", "success");
+        setIsPublished(true);
       } catch (error) {
         console.error("发布文档时出错:", error);
-        showToast("发布文档失，请重试。"); // 使用 showToast 显示消息
+        showToast("发布文档失，请重试。", "error");
       }
     } else {
       console.warn("没有选中的节点ID，无法发布文档。");
@@ -330,11 +325,11 @@ export default function WritePage() {
           variables: { id: selectedNodeId },
         });
         console.log("取消发布成功，响应:", response);
-        showToast("文档已成功取消发布！"); // 使用 showToast 显示消息
-        setIsPublished(false); // 更新发布状态
+        showToast("文档已成功取消发布！", "success");
+        setIsPublished(false);
       } catch (error) {
         console.error("取消发布文档时出错:", error);
-        showToast("取消发布文档失败，请重试。"); // 使用 showToast 显示消息
+        showToast("取消发布文档失败，请重试。", "error");
       }
     } else {
       console.warn("没有选中的节点ID，无法取消发布文档。");
@@ -349,14 +344,14 @@ export default function WritePage() {
       });
       console.log("Delete response:", response);
       if (response.data.deleteDocumentsAndChildren) {
-        showToast("节点删除成功");
+        showToast("节点删除成功", "success");
         refetch();
       } else {
-        showToast("节点删除失败");
+        showToast("节点删除失败", "error");
       }
     } catch (error) {
       console.error("删除节点时出错:", error);
-      showToast("删除节点失败，请重试");
+      showToast("删除节点失败，请重试", "error");
     }
   };
 
@@ -411,12 +406,6 @@ export default function WritePage() {
                     placeholder="搜索文档..."
                     className="w-full px-3 py-2 ml-12 bg-forest-bg text-forest-text border border-forest-border rounded focus:outline-none focus:ring-2 focus:ring-forest-accent" // 更新样式
                   />
-                  <button
-                    type="submit"
-                    className="ml-2 p-1 bg-forest-accent text-white rounded"
-                  >
-                    <MagnifyingGlassIcon className="w-5 h-5" />
-                  </button>
                   <button
                     onClick={() => setIsSearchMode(false)}
                     className="ml-2 p-1 bg-forest-bg text-forest-text border border-forest-border rounded"
@@ -538,8 +527,6 @@ export default function WritePage() {
           </div>
         </div>
       </div>
-
-      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
 }
