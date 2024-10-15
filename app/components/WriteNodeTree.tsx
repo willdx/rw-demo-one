@@ -79,9 +79,10 @@ const formatGraphData = (
         data: {
           label: node.fileName,
           content: node.content,
-          // isPublished: node.isPublished,
           depth,
           isSelected: false,
+          isDragging: false,
+          isPossibleTarget: false,
           layout,
         },
         position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
@@ -129,32 +130,48 @@ interface WriteNodeTreeProps {
 // 更新 CustomNode 组件
 const CustomNode: React.FC<NodeProps> = ({ data, isConnectable }) => (
   <div
-    className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
-      data.depth === 0
-        ? "bg-forest-accent border-2 border-forest-accent"
-        : data.isSelected
-        ? "bg-forest-accent/10 border-2 border-forest-accent"
-        : "bg-white border-2 border-forest-border"
-    } ${data.isDragging ? "scale-105 shadow-lg" : ""} ${
-      data.isPossibleTarget ? "ring-2 ring-forest-accent" : ""
-    }`}
+    className={`
+      px-4 py-3 rounded-lg shadow-md transition-all duration-200 ease-in-out
+      ${data.depth === 0
+        ? "bg-primary text-primary-content font-semibold"
+        : "bg-base-100 text-base-content"
+      }
+      ${data.isSelected
+        ? "ring-2 ring-primary ring-offset-2 shadow-lg scale-105"
+        : "hover:shadow-lg hover:-translate-y-0.5"
+      }
+      ${data.isDragging
+        ? "shadow-xl scale-105 z-50"
+        : ""
+      }
+      ${data.isPossibleTarget
+        ? "ring-2 ring-secondary ring-opacity-50"
+        : ""
+      }
+      border border-base-300
+      hover:bg-base-200
+      cursor-pointer
+      transform perspective-1000
+    `}
+    style={{
+      transform: data.isDragging ? 'translateZ(20px)' : 'translateZ(0)',
+      transition: 'transform 0.3s ease-in-out',
+    }}
   >
-    <span
-      className={`text-sm font-medium ${
-        data.depth === 0 ? "text-white font-bold" : "text-forest-text"
-      }`}
-    >
+    <span className="text-sm font-medium block truncate">
       {data.label}
     </span>
     <Handle
       type="target"
       position={data.layout === "LR" ? Position.Left : Position.Top}
       isConnectable={isConnectable}
+      className="w-3 h-3 bg-secondary/70 hover:bg-secondary"
     />
     <Handle
       type="source"
       position={data.layout === "LR" ? Position.Right : Position.Bottom}
       isConnectable={isConnectable}
+      className="w-3 h-3 bg-secondary/70 hover:bg-secondary"
     />
   </div>
 );
@@ -364,7 +381,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
   const handleAddNode = useCallback(
     async (parentId: string) => {
-      if (!parentId || !user) return; // 确保有用户信息
+      if (!parentId || !user) return; // 确保有用户信
 
       try {
         const { data } = await createSubDocument({
