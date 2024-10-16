@@ -13,8 +13,8 @@ export const GET_DOCUMENT = gql`
   }
 `;
 
-export const UPDATE_DOCUMENT = gql`
-  mutation UpdateDocument(
+export const UPDATE_DOCUMENT_CONTENT = gql`
+  mutation UpdateDocumentContent(
     $where: DocumentWhere!
     $update: DocumentUpdateInput!
   ) {

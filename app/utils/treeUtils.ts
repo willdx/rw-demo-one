@@ -19,6 +19,13 @@ export interface DocumentNode {
   };
 }
 
+export interface FormattedDocumentNode {
+  id: string;
+  fileName: string;
+  content: string;
+  isPublished: boolean;
+}
+
 // 格式化图形数据
 export const formatGraphData = (
   document: DocumentNode,

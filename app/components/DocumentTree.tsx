@@ -94,10 +94,10 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   useEffect(() => {
     if (data?.documents?.length) {
-      setSelectedNode(data.documents[0]); // 刷新页面获取到数据之后，默认设置第一个节点为选中节点
-      const formattedData = formatGraphData(data.documents[0], layout);
-      setNodes(formattedData.nodes);
-      setEdges(formattedData.edges);
+      const { nodes, edges } = formatGraphData(data.documents[0], layout);
+      setSelectedNode(nodes[0]); // 默认选中第一个, 并且为格式化为树图之后的格式
+      setNodes(nodes);
+      setEdges(edges);
     }
   }, [data, layout, setNodes, setEdges]);
 
@@ -118,7 +118,9 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
+      console.log("handleNodeClick node:", node);
       setSelectedNode(node as DocumentNode);
+      //   console.log("handleNodeClick selectedNode:", selectedNode); // 还是之前的selectedNode
       setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
     },
     [setSelectedNode, nodes, setEdges]

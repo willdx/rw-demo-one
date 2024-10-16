@@ -8,7 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { UPDATE_DOCUMENT, SEARCH_DOCUMENTS } from "../../graphql/queries";
+import { SEARCH_DOCUMENTS } from "../../graphql/queries";
 import { UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED } from "../../graphql/mutations";
 import WriteMarkdownTree, {
   WriteMarkdownTreeRef,
@@ -140,7 +140,6 @@ export default function WritePage() {
     [setSelectedNode]
   );
 
-  const [updateDocument] = useMutation(UPDATE_DOCUMENT);
   const [updateDocumentIsPublished] = useMutation(
     UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
   );
@@ -149,57 +148,57 @@ export default function WritePage() {
     setSelectedChapterId(nodeId);
   };
 
-  const debouncedUpdateDocument = useCallback(
-    debounce(async (updatedFullContent: string, updatedFileName: string) => {
-      if (selectedNode?.id) {
-        try {
-          await updateDocument({
-            variables: {
-              where: { id: selectedNode.id },
-              update: {
-                content: updatedFullContent,
-                fileName: updatedFileName,
-              },
-            },
-          });
-        } catch (error) {
-          console.error("Error updating document:", error);
-        }
-      }
-    }, 200),
-    [selectedNode?.id]
-  );
+  // const debouncedUpdateDocument = useCallback(
+  //   debounce(async (updatedFullContent: string, updatedFileName: string) => {
+  //     if (selectedNode?.id) {
+  //       try {
+  //         await updateDocument({
+  //           variables: {
+  //             where: { id: selectedNode.id },
+  //             update: {
+  //               content: updatedFullContent,
+  //               fileName: updatedFileName,
+  //             },
+  //           },
+  //         });
+  //       } catch (error) {
+  //         console.error("Error updating document:", error);
+  //       }
+  //     }
+  //   }, 200),
+  //   [selectedNode?.id]
+  // );
 
-  const handleContentChange = (
-    newContent: string,
-    chapterId: string | null
-  ) => {
-    console.log(`handleContentChange 被调用，selectedNode: ${selectedNode}`);
-    console.log(`chapterId: ${chapterId}, 新内容长度: ${newContent.length}`);
-    let updatedFullContent = fullContentRef.current;
-    if (chapterId && chapterId !== "root") {
-      console.log(`更新章节内容，章节ID: ${chapterId}`);
-      console.log("原始全文内容:", updatedFullContent);
-      const parsedMarkdown =
-        writeMarkdownTreeRef.current?.getParsedMarkdown() || [];
-      console.log("####parsedMarkdown:", parsedMarkdown);
-      updatedFullContent = replaceNodeContent(
-        updatedFullContent,
-        parsedMarkdown,
-        chapterId,
-        newContent
-      );
-      console.log("更新后的全文内容:", updatedFullContent);
-    } else {
-      console.log("更新整个文档内容");
-      updatedFullContent = newContent;
-    }
-    setFullContent(updatedFullContent);
-    debouncedUpdateDocument(
-      updatedFullContent,
-      extractFileName(updatedFullContent)
-    );
-  };
+  // const handleContentChange = (
+  //   newContent: string,
+  //   chapterId: string | null
+  // ) => {
+  //   console.log(`handleContentChange 被调用，selectedNode: ${selectedNode}`);
+  //   console.log(`chapterId: ${chapterId}, 新内容长度: ${newContent.length}`);
+  //   let updatedFullContent = fullContentRef.current;
+  //   if (chapterId && chapterId !== "root") {
+  //     console.log(`更新章节内容，章节ID: ${chapterId}`);
+  //     console.log("原始全文内容:", updatedFullContent);
+  //     const parsedMarkdown =
+  //       writeMarkdownTreeRef.current?.getParsedMarkdown() || [];
+  //     console.log("####parsedMarkdown:", parsedMarkdown);
+  //     updatedFullContent = replaceNodeContent(
+  //       updatedFullContent,
+  //       parsedMarkdown,
+  //       chapterId,
+  //       newContent
+  //     );
+  //     console.log("更新后的全文内容:", updatedFullContent);
+  //   } else {
+  //     console.log("更新整个文档内容");
+  //     updatedFullContent = newContent;
+  //   }
+  //   setFullContent(updatedFullContent);
+  //   debouncedUpdateDocument(
+  //     updatedFullContent,
+  //     extractFileName(updatedFullContent)
+  //   );
+  // };
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 
@@ -214,8 +213,7 @@ export default function WritePage() {
       await updateDocumentIsPublished({
         variables: {
           id: selectedNode?.id,
-          isPublished:
-            selectedNode?.data?.isPublished || selectedNode?.isPublished,
+          isPublished: selectedNode?.isPublished ? false : true,
         },
       });
       showToast("操作成功", "success");
@@ -332,11 +330,7 @@ export default function WritePage() {
         className={`flex-1 flex flex-col overflow-hidden bg-forest-content h-full w-full`}
       >
         <div className={`h-full w-full`}>
-          <VditorEditor
-            content={selectedNode?.data?.content || selectedNode?.content || ""}
-            onChange={handleContentChange}
-            selectedChapterId={selectedChapterId}
-          />
+          <VditorEditor />
         </div>
       </div>
 
@@ -354,11 +348,7 @@ export default function WritePage() {
       <div className="absolute right-0 bottom-0 mb-6 mr-8">
         <div
           className="tooltip"
-          data-tip={
-            selectedNode?.data?.isPublished || selectedNode?.isPublished
-              ? "取消发布"
-              : "发布文档"
-          }
+          data-tip={selectedNode?.isPublished ? "取消发布" : "发布文档"}
         >
           <div
             className="cursor-pointer"
@@ -366,7 +356,7 @@ export default function WritePage() {
               updateDocumentIsPublishedWrapper();
             }}
           >
-            {selectedNode?.data?.isPublished || selectedNode?.isPublished ? (
+            {selectedNode?.isPublished ? (
               <ArrowDownCircleIcon className="h-8 w-8 text-secondary" />
             ) : (
               <ArrowUpCircleIcon className="h-8 w-8 text-primary" />

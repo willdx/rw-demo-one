@@ -4,30 +4,47 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 import debounce from "lodash/debounce";
+import { useDocumentContext } from "@/app/contexts/DocumentContext";
+import { useMutation } from "@apollo/client";
+import { UPDATE_DOCUMENT_CONTENT } from "../graphql/queries";
+import { extractFileName } from "../utils/markdownUtils";
 
-interface VditorEditorProps {
-  content: string;
-  onChange: (value: string, chapterId: string | null) => void;
-  selectedChapterId: string | null;
-}
-
-const VditorEditor: React.FC<VditorEditorProps> = ({
-  content,
-  onChange,
-  selectedChapterId,
-}) => {
+const VditorEditor: React.FC<{}> = () => {
+  const { selectedNode, setSelectedNode } = useDocumentContext();
   const editorRef = useRef<Vditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const currentChapterIdRef = useRef<string | null>(null);
+  const selectedNodeRef = useRef(selectedNode); // 否则input中获取的selectedNode一直为null
 
-  const debouncedOnChange = useCallback(
-    debounce((value: string) => {
+  const [updateDocumentContent] = useMutation(UPDATE_DOCUMENT_CONTENT);
+
+  useEffect(() => {
+    selectedNodeRef.current = selectedNode;
+  }, [selectedNode]);
+
+  const debouncedUpdateDocumentContent = useCallback(
+    debounce(async (value) => {
+      const currentNode = selectedNodeRef.current;
       console.log(
-        `编辑器内容变更，延迟300ms后触发回调，章节ID: ${currentChapterIdRef.current}`
+        `VditorEditor debouncedUpdateDocumentContent selectedNode:`,
+        currentNode
       );
-      onChange(value, currentChapterIdRef.current);
-    }, 300),
-    [onChange]
+      if (currentNode?.id) {
+        try {
+          await updateDocumentContent({
+            variables: {
+              where: { id: currentNode.id },
+              update: {
+                content: value,
+                fileName: extractFileName(value),
+              },
+            },
+          });
+        } catch (error) {
+          console.error("Error updating document:", error);
+        }
+      }
+    }, 200),
+    [updateDocumentContent, setSelectedNode]
   );
 
   useEffect(() => {
@@ -45,23 +62,20 @@ const VditorEditor: React.FC<VditorEditorProps> = ({
         },
         input: (value) => {
           console.log(`编辑器内容变更，当前内容长度: ${value.length}`);
-          debouncedOnChange(value);
+          console.log("VditorEditor selectedNode:", selectedNodeRef.current);
+          debouncedUpdateDocumentContent(value);
         },
       });
     }
-  }, [debouncedOnChange]);
-
-  useEffect(() => {
-    currentChapterIdRef.current = selectedChapterId;
-    console.log(`selectedChapterId 更新: ${selectedChapterId}`);
-  }, [selectedChapterId]);
+  }, [debouncedUpdateDocumentContent]);
 
   useEffect(() => {
     if (isEditorReady && editorRef.current) {
+      const content = selectedNode?.content || "";
       console.log(`设置编辑器内容，长度: ${content.length}`);
       editorRef.current.setValue(content);
     }
-  }, [content, isEditorReady]);
+  }, [selectedNode, isEditorReady]);
 
   return <div id="vditor" className="h-full w-full" />;
 };
