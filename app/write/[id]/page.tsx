@@ -9,10 +9,7 @@ import React, {
 } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { UPDATE_DOCUMENT, SEARCH_DOCUMENTS } from "../../graphql/queries";
-import {
-  DELETE_DOCUMENTS_AND_CHILDREN,
-  UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED,
-} from "../../graphql/mutations";
+import { UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED } from "../../graphql/mutations";
 import WriteMarkdownTree, {
   WriteMarkdownTreeRef,
 } from "../../components/WriteMarkdownTree";

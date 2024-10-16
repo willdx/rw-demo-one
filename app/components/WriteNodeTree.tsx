@@ -14,7 +14,6 @@ import {
   Background,
   useNodesState,
   useEdgesState,
-  Handle,
   Position,
   ControlButton,
   useReactFlow,
@@ -23,7 +22,6 @@ import {
   Connection,
   addEdge,
   BackgroundVariant,
-  NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
@@ -263,20 +261,10 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
         },
       ],
     },
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    },
     skip: !token,
   });
 
   const [createSubDocument] = useMutation(CREATE_SUB_DOCUMENT, {
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    },
     update: (cache, { data: { updateDocuments } }) => {
       const newDocument = updateDocuments.documents[0];
       cache.modify({
@@ -299,25 +287,12 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   });
 
   const [deleteDocumentsAndChildren] = useMutation(
-    DELETE_DOCUMENTS_AND_CHILDREN,
-    {
-      context: {
-        headers: {
-          authorization: token ? `Bearer ${token}` : "",
-        },
-      },
-    }
+    DELETE_DOCUMENTS_AND_CHILDREN
   );
 
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [changeDocumentParent] = useMutation(CHANGE_DOCUMENT_PARENT, {
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    },
-  });
+  const [changeDocumentParent] = useMutation(CHANGE_DOCUMENT_PARENT);
 
   const handleAddNode = useCallback(
     async (parentId: string) => {
@@ -335,9 +310,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
 
         const updatedNode = data.updateDocuments.documents[0];
 
-        // 重新获取文档数据
         await refetch();
-        console.log(`### updatedNode: ${JSON.stringify(updatedNode)}`);
         onNodeSelect(updatedNode);
         showToast("节点添加成功", "success");
       } catch (error) {

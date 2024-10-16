@@ -94,6 +94,7 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   useEffect(() => {
     if (data?.documents?.length) {
+      setSelectedNode(data.documents[0]); // 刷新页面获取到数据之后，默认设置第一个节点为选中节点
       const formattedData = formatGraphData(data.documents[0], layout);
       setNodes(formattedData.nodes);
       setEdges(formattedData.edges);
