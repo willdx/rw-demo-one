@@ -23,6 +23,7 @@ import dagre from "dagre";
 import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import TreeSkeleton from "./TreeSkeleton";
 import { useAuth } from "../contexts/AuthContext";
+import CustomNode from "./CustomNode";
 
 const GET_DOCUMENTS = gql`
   query Documents(
@@ -181,41 +182,6 @@ const formatGraphData = (
 
   return { nodes, edges };
 };
-
-// 更新自定义节点组件
-const CustomNode: React.FC<{
-  data: { label: string; depth: number; isSelected: boolean };
-}> = ({ data }) => (
-  <>
-    <div
-      className={`px-3 py-2 rounded-md shadow-sm transition-all duration-200 ${
-        data.depth === 0
-          ? "bg-forest-accent border-2 border-forest-accent"
-          : data.isSelected
-          ? "bg-forest-accent/10 border-2 border-forest-accent"
-          : "bg-white border-2 border-forest-border"
-      }`}
-    >
-      <span
-        className={`text-sm font-medium ${
-          data.depth === 0 ? "text-white font-bold" : "text-forest-text"
-        }`}
-      >
-        {data.label}
-      </span>
-    </div>
-    <Handle
-      type="target"
-      position={Position.Left}
-      className="w-3 h-3 -left-1.5 bg-forest-accent"
-    />
-    <Handle
-      type="source"
-      position={Position.Right}
-      className="w-3 h-3 -right-1.5 bg-forest-accent"
-    />
-  </>
-);
 
 const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
   const visited = new Set<string>();

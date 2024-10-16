@@ -40,6 +40,7 @@ import {
 } from "../graphql/mutations";
 import { useToast } from "../contexts/ToastContext";
 import { createGetDocumentsQuery } from "../graphql/queries";
+import CustomNode from "./CustomNode";
 
 // 常量定义
 const NODE_WIDTH = 200;
@@ -126,55 +127,6 @@ interface WriteNodeTreeProps {
   documentId: string;
   selectedNodeId: string | null;
 }
-
-// 更新 CustomNode 组件
-const CustomNode: React.FC<NodeProps> = ({ data, isConnectable }) => (
-  <div
-    className={`
-      px-4 py-3 rounded-lg shadow-md transition-all duration-200 ease-in-out
-      ${data.depth === 0
-        ? "bg-primary text-primary-content font-semibold"
-        : "bg-base-100 text-base-content"
-      }
-      ${data.isSelected
-        ? "ring-2 ring-primary ring-offset-2 shadow-lg scale-105"
-        : "hover:shadow-lg hover:-translate-y-0.5"
-      }
-      ${data.isDragging
-        ? "shadow-xl scale-105 z-50"
-        : ""
-      }
-      ${data.isPossibleTarget
-        ? "ring-2 ring-secondary ring-opacity-50"
-        : ""
-      }
-      border border-base-300
-      hover:bg-base-200
-      cursor-pointer
-      transform perspective-1000
-    `}
-    style={{
-      transform: data.isDragging ? 'translateZ(20px)' : 'translateZ(0)',
-      transition: 'transform 0.3s ease-in-out',
-    }}
-  >
-    <span className="text-sm font-medium block truncate">
-      {data.label}
-    </span>
-    <Handle
-      type="target"
-      position={data.layout === "LR" ? Position.Left : Position.Top}
-      isConnectable={isConnectable}
-      className="w-3 h-3 bg-secondary/70 hover:bg-secondary"
-    />
-    <Handle
-      type="source"
-      position={data.layout === "LR" ? Position.Right : Position.Bottom}
-      isConnectable={isConnectable}
-      className="w-3 h-3 bg-secondary/70 hover:bg-secondary"
-    />
-  </div>
-);
 
 // 更新边样
 const updateEdgeStylesOnNodeClick = (
@@ -271,20 +223,6 @@ const dfsTraversal = (nodes: Node[], edges: Edge[]): string[] => {
   return result;
 };
 
-const isIntersecting = (node1: Node, node2: Node) => {
-  const n1 = node1.position;
-  const n2 = node2.position;
-  const nodeWidth = NODE_WIDTH; // 假设所有节点宽度相同
-  const nodeHeight = NODE_HEIGHT; // 假设所有节点高度相同
-
-  return !(
-    n2.x > n1.x + nodeWidth ||
-    n2.x + nodeWidth < n1.x ||
-    n2.y > n1.y + nodeHeight ||
-    n2.y + nodeHeight < n1.y
-  );
-};
-
 const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   onNodeSelect,
   documentId,
@@ -295,7 +233,9 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView, getIntersectingNodes } = useReactFlow();
-  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">("auto");
+  const [layout, setLayout] = useState<"auto" | "horizontal" | "vertical">(
+    "auto"
+  );
 
   // 使用 useRef 来存储最新的 nodes 和 edges
   const nodesRef = useRef(nodes);
@@ -646,15 +586,18 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
   const [possibleTargets, setPossibleTargets] = useState<string[]>([]);
 
   // 更新 onNodeDragStart 处理函数
-  const onNodeDragStart = useCallback((event: React.MouseEvent, node: Node) => {
-    setDraggedNode(node);
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        data: { ...n.data, isDragging: n.id === node.id },
-      }))
-    );
-  }, [setNodes]);
+  const onNodeDragStart = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      setDraggedNode(node);
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, isDragging: n.id === node.id },
+        }))
+      );
+    },
+    [setNodes]
+  );
 
   // 更新 onNodeDrag 处理函数
   const onNodeDrag = useCallback(
@@ -670,7 +613,10 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
-          data: { ...n.data, isPossibleTarget: possibleTargetIds.includes(n.id) },
+          data: {
+            ...n.data,
+            isPossibleTarget: possibleTargetIds.includes(n.id),
+          },
         }))
       );
     },
@@ -730,6 +676,9 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
     [draggedNode, getIntersectingNodes, handleNodeMove, setNodes]
   );
 
+  // 更新 nodeTypes
+  const nodeTypes = { customNode: CustomNode };
+
   if (loading) return <TreeSkeleton />;
   if (error)
     return (
@@ -764,7 +713,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
         onNodeClick={handleNodeClick}
         onNodeContextMenu={onNodeContextMenu}
         onClick={closeContextMenu}
-        nodeTypes={{ customNode: CustomNode }}
+        nodeTypes={nodeTypes}
         fitView
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
