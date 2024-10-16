@@ -334,9 +334,9 @@ export default function WritePage() {
       <div
         className={`flex-1 flex flex-col overflow-hidden bg-forest-content h-full w-full`}
       >
-        <div className={`${leftCollapsed ? "w-full" : "w-3/5"} h-full w-full`}>
+        <div className={`h-full w-full`}>
           <VditorEditor
-            content={selectedNode?.data?.content || ""}
+            content={selectedNode?.data?.content || selectedNode?.content || ""}
             onChange={handleContentChange}
             selectedChapterId={selectedChapterId}
           />
@@ -357,7 +357,11 @@ export default function WritePage() {
       <div className="absolute right-0 bottom-0 mb-6 mr-8">
         <div
           className="tooltip"
-          data-tip={selectedNode?.data?.isPublished ? "取消发布" : "发布文档"}
+          data-tip={
+            selectedNode?.data?.isPublished || selectedNode?.isPublished
+              ? "取消发布"
+              : "发布文档"
+          }
         >
           <div
             className="cursor-pointer"
@@ -365,7 +369,7 @@ export default function WritePage() {
               updateDocumentIsPublishedWrapper();
             }}
           >
-            {selectedNode?.data?.isPublished ? (
+            {selectedNode?.data?.isPublished || selectedNode?.isPublished ? (
               <ArrowDownCircleIcon className="h-8 w-8 text-secondary" />
             ) : (
               <ArrowUpCircleIcon className="h-8 w-8 text-primary" />
