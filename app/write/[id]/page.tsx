@@ -147,9 +147,6 @@ export default function WritePage() {
   const [updateDocumentIsPublished] = useMutation(
     UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
   );
-  const [deleteDocumentsAndChildren] = useMutation(
-    DELETE_DOCUMENTS_AND_CHILDREN
-  );
 
   const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
     setSelectedChapterId(nodeId);
@@ -220,7 +217,8 @@ export default function WritePage() {
       await updateDocumentIsPublished({
         variables: {
           id: selectedNode?.id,
-          isPublished: selectedNode?.data?.isPublished,
+          isPublished:
+            selectedNode?.data?.isPublished || selectedNode?.isPublished,
         },
       });
       showToast("操作成功", "success");

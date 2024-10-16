@@ -30,6 +30,8 @@ import {
   DocumentNode,
   formatGraphData,
   dfsTraversal,
+  getLayoutedElements,
+  updateEdgeStylesOnNodeClick,
 } from "../utils/treeUtils";
 import { useQuery, useMutation } from "@apollo/client";
 import { createGetDocumentsQuery } from "../graphql/queries";
@@ -43,7 +45,6 @@ import { useParams } from "next/navigation";
 import { useToast } from "../contexts/ToastContext";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
-import { getLayoutedElements } from "../utils/treeUtils";
 import TreeSkeleton from "./TreeSkeleton";
 
 interface DocumentTreeProps {
@@ -99,6 +100,16 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     }
   }, [data, layout, setNodes, setEdges]);
 
+  const [dfsOrder, setDfsOrder] = useState<string[]>([]);
+  const [currentDfsIndex, setCurrentDfsIndex] = useState<number>(0);
+  useEffect(() => {
+    if (nodes.length > 0 && edges.length > 0) {
+      const order = dfsTraversal(nodes, edges);
+      setDfsOrder(order);
+      setCurrentDfsIndex(order.findIndex((id) => id === selectedNode?.id) || 0);
+    }
+  }, [nodes, edges, selectedNode]);
+
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
@@ -107,8 +118,35 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       setSelectedNode(node as DocumentNode);
+      setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
     },
-    [setSelectedNode]
+    [setSelectedNode, nodes, setEdges]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        console.log("event.key:", event.key);
+        setCurrentDfsIndex((prevIndex) => {
+          console.log("prevIndex:", prevIndex);
+          const newIndex =
+            event.key === "ArrowLeft"
+              ? Math.max(prevIndex - 1, 0)
+              : Math.min(prevIndex + 1, dfsOrder.length - 1);
+          console.log("newIndex:", newIndex);
+          console.log("dfsOrder:", dfsOrder);
+          const nodeId = dfsOrder[newIndex];
+          const node = nodes.find((n) => n.id === nodeId);
+          // 这里的formatGraphData之后的node类型和Graphql请求返回的DocumentNode类型不一样
+          if (node) {
+            setSelectedNode(node as DocumentNode);
+            setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
+          }
+          return newIndex;
+        });
+      }
+    },
+    [dfsOrder, nodes, setSelectedNode, setEdges]
   );
 
   const updateLayout = useCallback(
@@ -349,10 +387,12 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
     document.addEventListener("click", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("click", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [closeContextMenu]);
+  }, [closeContextMenu, handleKeyDown]);
 
   // 设定节点的样式
   const nodeTypes = { customNode: CustomNode };
@@ -389,9 +429,9 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        onNodeDragStart={onNodeDragStart}
-        onNodeDrag={onNodeDrag}
-        onNodeDragStop={onNodeDragStop}
+        onNodeDragStart={mode === "write" ? onNodeDragStart : () => {}}
+        onNodeDrag={mode === "write" ? onNodeDrag : () => {}}
+        onNodeDragStop={mode === "write" ? onNodeDragStop : () => {}}
         onNodeContextMenu={onNodeContextMenu}
         onClick={closeContextMenu}
       >

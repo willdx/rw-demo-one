@@ -72,7 +72,7 @@ export const formatGraphData = (
 };
 
 // 更新边样
-const updateEdgeStylesOnNodeClick = (
+export const updateEdgeStylesOnNodeClick = (
   selectedNodeId: string,
   nodes: Node[],
   edges: Edge[]

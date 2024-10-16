@@ -3,24 +3,9 @@ import { gql } from "@apollo/client";
 export const UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED = gql`
   mutation UpdateDocumentIsPublished($id: ID!, $isPublished: Boolean!) {
     updateDocuments(where: { id: $id }, update: { isPublished: $isPublished }) {
-      info {
-        nodesCreated
-        nodesDeleted
-      }
       documents {
         id
         isPublished
-      }
-    }
-  }
-`;
-
-export const UPDATE_DOCUMENT_FILENAME = gql`
-  mutation UpdateDocumentFileName($id: ID!, $fileName: String!) {
-    updateDocuments(where: { id: $id }, update: { fileName: $fileName }) {
-      documents {
-        id
-        fileName
       }
     }
   }
