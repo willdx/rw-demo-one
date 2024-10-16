@@ -7,23 +7,16 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { useQuery, useMutation, ApolloError } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
+import { UPDATE_DOCUMENT, SEARCH_DOCUMENTS } from "../../graphql/queries";
 import {
-  GET_DOCUMENT,
-  UPDATE_DOCUMENT,
-  SEARCH_DOCUMENTS,
-} from "../../graphql/queries";
-import {
-  PUBLISH_DOCUMENT,
-  UNPUBLISH_DOCUMENT,
   DELETE_DOCUMENTS_AND_CHILDREN,
+  UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED,
 } from "../../graphql/mutations";
-import WriteNodeTree from "../../components/WriteNodeTree";
 import WriteMarkdownTree, {
   WriteMarkdownTreeRef,
 } from "../../components/WriteMarkdownTree";
 import VditorEditor from "../../components/VditorEditor";
-import { useParams } from "next/navigation";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -37,45 +30,37 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
-import { replaceNodeContent } from "../../utils/markdownUtils";
+import {
+  extractFileName,
+  highlightSearchResult,
+  replaceNodeContent,
+} from "../../utils/markdownUtils";
 import SearchResults, { SearchResult } from "../../components/SearchResults";
 import { useInView } from "react-intersection-observer";
 import { useToast } from "../../contexts/ToastContext";
-
-// 添加 DocumentNode 类型定义
-interface DocumentNode {
-  id: string;
-  fileName: string;
-  content: string;
-  isPublished: boolean;
-}
+import DocumentTree from "../../components/DocumentTree";
+import { useDocumentContext } from "@/app/contexts/DocumentContext";
 
 export default function WritePage() {
-  const params = useParams();
-  const documentId = params?.id as string;
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const selectedNodeIdRef = useRef<string | null>(null);
-  const [content, setContent] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
   const { token } = useAuth();
+  const { showToast } = useToast();
+  const { selectedNode, setSelectedNode } = useDocumentContext();
 
+  // markdown tree功能状态
   const [fullContent, setFullContent] = useState("");
   const fullContentRef = useRef("");
-  const parsedContentRef = useRef<MarkdownNode[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
     null
   );
   const writeMarkdownTreeRef = useRef<WriteMarkdownTreeRef>(null);
 
-  const { showToast } = useToast();
-
+  // 搜索功能状态
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [hasMoreResults, setHasMoreResults] = useState(false);
-
   const searchVariables = useMemo(
     () => ({
       searchTerm: searchQuery,
@@ -100,15 +85,6 @@ export default function WritePage() {
       },
     },
   });
-
-  const handleSearchResultClick = useCallback(
-    (result: SearchResult) => {
-      setContent(result.content);
-      setSelectedNodeId(result.id);
-      // 移除 setIsSearchMode(false);，这样点击"查看"按钮不会关闭搜索模式
-    },
-    [setContent, setSelectedNodeId]
-  );
 
   const handleLoadMore = useCallback(() => {
     if (searchData?.documentsConnection?.pageInfo?.endCursor) {
@@ -157,94 +133,35 @@ export default function WritePage() {
 
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    // 重置搜索结果
     setSearchResults([]);
-    // 不需要手动触发查询，因为 searchQuery 的变化会自动触发新的查询
   }, []);
 
-  const { data, refetch } = useQuery(GET_DOCUMENT, {
-    variables: { id: documentId },
-    skip: !documentId || !token,
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
+  const handleSearchResultClick = useCallback(
+    (result: SearchResult) => {
+      setSelectedNode(result);
     },
-  });
-
-  const [updateDocument] = useMutation(UPDATE_DOCUMENT, {
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    },
-  });
-
-  const [publishDocument] = useMutation(PUBLISH_DOCUMENT, {
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    },
-  });
-
-  const [unpublishDocument] = useMutation(UNPUBLISH_DOCUMENT, {
-    context: {
-      headers: {
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    },
-  });
-
-  const [deleteDocumentsAndChildren] = useMutation(
-    DELETE_DOCUMENTS_AND_CHILDREN,
-    {
-      context: {
-        headers: {
-          authorization: token ? `Bearer ${token}` : "",
-        },
-      },
-    }
+    [setSelectedNode]
   );
 
-  useEffect(() => {
-    if (data && data.documents && data.documents.length > 0) {
-      const docContent = data.documents[0].content;
-      setFullContent(docContent);
-      fullContentRef.current = docContent;
-      setContent(docContent);
-      setFileName(extractFileName(docContent));
-      setSelectedNodeId(data.documents[0].id);
-      setIsPublished(data.documents[0].isPublished); // 更新发布状态
-    }
-  }, [data]);
-
-  const [isPublished, setIsPublished] = useState(false); // 添加状态管理
-
-  const onNodeSelect = (node: DocumentNode) => {
-    // 格式化为react flow的格式时结构发生了变化，node类型不太一样, 这里简单兼容一下
-    console.log(`onNodeSelect 被调用，selectedNode: ${JSON.stringify(node)}`);
-    setSelectedNodeId(node.id);
-    selectedNodeIdRef.current = node.id;
-    setContent(node.data ? node.data.content : node.content);
-    setFullContent(node.data ? node.data.content : node.content);
-    setSelectedChapterId(null); // 重置 selectedChapterId
-    // 更新发布状态
-    setIsPublished(node.data ? node.data.isPublished : node.isPublished);
-  };
+  const [updateDocument] = useMutation(UPDATE_DOCUMENT);
+  const [updateDocumentIsPublished] = useMutation(
+    UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
+  );
+  const [deleteDocumentsAndChildren] = useMutation(
+    DELETE_DOCUMENTS_AND_CHILDREN
+  );
 
   const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
     setSelectedChapterId(nodeId);
-    setContent(nodeContent);
   };
 
   const debouncedUpdateDocument = useCallback(
     debounce(async (updatedFullContent: string, updatedFileName: string) => {
-      if (selectedNodeIdRef.current) {
+      if (selectedNode?.id) {
         try {
           await updateDocument({
             variables: {
-              where: { id: selectedNodeIdRef.current },
+              where: { id: selectedNode.id },
               update: {
                 content: updatedFullContent,
                 fileName: updatedFileName,
@@ -256,18 +173,16 @@ export default function WritePage() {
         }
       }
     }, 200),
-    [selectedNodeIdRef.current]
+    [selectedNode?.id]
   );
 
   const handleContentChange = (
     newContent: string,
     chapterId: string | null
   ) => {
-    console.log(
-      `handleContentChange 被调用，selectedNodeId: ${selectedNodeId}, chapterId: ${chapterId}, 新内容长度: ${newContent.length}`
-    );
+    console.log(`handleContentChange 被调用，selectedNode: ${selectedNode}`);
+    console.log(`chapterId: ${chapterId}, 新内容长度: ${newContent.length}`);
     let updatedFullContent = fullContentRef.current;
-    let updatedFileName = fileName;
     if (chapterId && chapterId !== "root") {
       console.log(`更新章节内容，章节ID: ${chapterId}`);
       console.log("原始全文内容:", updatedFullContent);
@@ -286,8 +201,10 @@ export default function WritePage() {
       updatedFullContent = newContent;
     }
     setFullContent(updatedFullContent);
-    updatedFileName = extractFileName(updatedFullContent);
-    debouncedUpdateDocument(updatedFullContent, updatedFileName);
+    debouncedUpdateDocument(
+      updatedFullContent,
+      extractFileName(updatedFullContent)
+    );
   };
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
@@ -298,79 +215,19 @@ export default function WritePage() {
     border-r border-forest-border relative overflow-hidden
   `;
 
-  const handlePublish = async () => {
-    if (selectedNodeId) {
-      console.log(`准备发布文档，节点ID: ${selectedNodeId}`);
-      try {
-        const response = await publishDocument({
-          variables: { id: selectedNodeId },
-        });
-        console.log("发布成功，响应:", response);
-        showToast("文档已成功发布！", "success");
-        setIsPublished(true);
-      } catch (error) {
-        console.error("发布文档时出错:", error);
-        showToast("发布文档失，请重试。", "error");
-      }
-    } else {
-      console.warn("没有选中的节点ID，无法发布文档。");
-    }
-  };
-
-  const handleUnpublish = async () => {
-    if (selectedNodeId) {
-      console.log(`准备取消发布文档，节点ID: ${selectedNodeId}`);
-      try {
-        const response = await unpublishDocument({
-          variables: { id: selectedNodeId },
-        });
-        console.log("取消发布成功，响应:", response);
-        showToast("文档已成功取消发布！", "success");
-        setIsPublished(false);
-      } catch (error) {
-        console.error("取消发布文档时出错:", error);
-        showToast("取消发布文档失败，请重试。", "error");
-      }
-    } else {
-      console.warn("没有选中的节点ID，无法取消发布文档。");
-    }
-  };
-
-  const handleDeleteNode = async (nodeId: string) => {
-    console.log("Attempting to delete node:", nodeId);
+  const updateDocumentIsPublishedWrapper = async () => {
     try {
-      const response = await deleteDocumentsAndChildren({
-        variables: { id: nodeId },
+      await updateDocumentIsPublished({
+        variables: {
+          id: selectedNode?.id,
+          isPublished: selectedNode?.data?.isPublished,
+        },
       });
-      console.log("Delete response:", response);
-      if (response.data.deleteDocumentsAndChildren) {
-        showToast("节点删除成功", "success");
-        refetch();
-      } else {
-        showToast("节点删除失败", "error");
-      }
+      showToast("操作成功", "success");
     } catch (error) {
-      console.error("删除节点时出错:", error);
-      showToast("删除节点失败，请重试", "error");
+      console.error("操作失败:", error);
+      showToast("操作失败，请重试。", "error");
     }
-  };
-
-  // 添加高亮搜索结果的函数
-  const highlightSearchResult = (content: string, query: string) => {
-    const regex = new RegExp(`(${query})`, "gi");
-    const words = content.split(" ");
-    const matchIndex = words.findIndex((word) => regex.test(word));
-
-    if (matchIndex === -1) return content.slice(0, 200) + "...";
-
-    const start = Math.max(0, matchIndex - 5);
-    const end = Math.min(words.length, matchIndex + 15);
-    let excerpt = words.slice(start, end).join(" ");
-
-    if (start > 0) excerpt = "..." + excerpt;
-    if (end < words.length) excerpt += "...";
-
-    return excerpt.replace(regex, "<mark>$1</mark>");
   };
 
   const { ref, inView } = useInView({
@@ -462,12 +319,7 @@ export default function WritePage() {
             ) : (
               <ReactFlowProvider>
                 {activeTab === "node" ? (
-                  <WriteNodeTree
-                    onNodeSelect={onNodeSelect}
-                    documentId={documentId}
-                    selectedNodeId={selectedNodeId}
-                    onDeleteNode={handleDeleteNode}
-                  />
+                  <DocumentTree mode="write" />
                 ) : (
                   <WriteMarkdownTree
                     ref={writeMarkdownTreeRef}
@@ -486,7 +338,7 @@ export default function WritePage() {
       >
         <div className={`${leftCollapsed ? "w-full" : "w-3/5"} h-full w-full`}>
           <VditorEditor
-            content={content}
+            content={selectedNode?.data?.content || ""}
             onChange={handleContentChange}
             selectedChapterId={selectedChapterId}
           />
@@ -507,19 +359,15 @@ export default function WritePage() {
       <div className="absolute right-0 bottom-0 mb-6 mr-8">
         <div
           className="tooltip"
-          data-tip={isPublished ? "取消发布" : "发布文档"}
+          data-tip={selectedNode?.data?.isPublished ? "取消发布" : "发布文档"}
         >
           <div
             className="cursor-pointer"
             onClick={() => {
-              if (isPublished) {
-                handleUnpublish();
-              } else {
-                handlePublish();
-              }
+              updateDocumentIsPublishedWrapper();
             }}
           >
-            {isPublished ? (
+            {selectedNode?.data?.isPublished ? (
               <ArrowDownCircleIcon className="h-8 w-8 text-secondary" />
             ) : (
               <ArrowUpCircleIcon className="h-8 w-8 text-primary" />
@@ -530,14 +378,3 @@ export default function WritePage() {
     </div>
   );
 }
-
-// 辅助函数：提取文件名（第一个一级标题）
-const extractFileName = (content: string): string => {
-  const lines = content.split("\n");
-  for (const line of lines) {
-    if (line.startsWith("# ")) {
-      return line.substring(2).trim();
-    }
-  }
-  return "未命名文档";
-};

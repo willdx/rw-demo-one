@@ -4,7 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "./theme-provider";
 import ApolloWrapper from "./components/ApolloWrapper";
 import { AuthProvider } from "./contexts/AuthContext";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
+import { DocumentProvider } from './contexts/DocumentContext';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -17,9 +18,12 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const DynamicToastProvider = dynamic(() => import('./contexts/ToastContext').then(mod => mod.ToastProvider), {
-  ssr: false
-});
+const DynamicToastProvider = dynamic(
+  () => import("./contexts/ToastContext").then((mod) => mod.ToastProvider),
+  {
+    ssr: false,
+  }
+);
 
 export const metadata: Metadata = {
   title: "Read and write",
@@ -45,9 +49,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <ApolloWrapper>
-              <DynamicToastProvider>
-                {children}
-              </DynamicToastProvider>
+              <DocumentProvider>
+                <DynamicToastProvider>{children}</DynamicToastProvider>
+              </DocumentProvider>
             </ApolloWrapper>
           </ThemeProvider>
         </AuthProvider>

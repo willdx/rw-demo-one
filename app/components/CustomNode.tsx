@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 
 interface CustomNodeData {
@@ -66,4 +66,4 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
   </div>
 );
 
-export default CustomNode;
+export default memo(CustomNode);

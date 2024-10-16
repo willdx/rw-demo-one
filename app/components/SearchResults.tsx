@@ -16,18 +16,19 @@ interface SearchResultsProps {
   onResultClick: (result: SearchResult) => void;
 }
 
-const SearchResults: React.FC<SearchResultsProps> = ({ 
-  results, 
-  loading, 
-  error, 
-  onResultClick
+const SearchResults: React.FC<SearchResultsProps> = ({
+  results,
+  loading,
+  error,
+  onResultClick,
 }) => {
-  if (loading && results.length === 0) return <div className="loading loading-spinner loading-md"></div>;
+  if (loading && results.length === 0)
+    return <div className="loading loading-spinner loading-md"></div>;
   if (error) return <div className="text-error">搜索出错: {error.message}</div>;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return isNaN(date.getTime()) ? '未知日期' : date.toLocaleString();
+    return isNaN(date.getTime()) ? "未知日期" : date.toLocaleString();
   };
 
   return (
@@ -41,7 +42,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-semibold mb-2">{result.fileName}</h3>
-              <p 
+              <p
                 className="text-sm text-forest-text-light"
                 dangerouslySetInnerHTML={{ __html: result.matchedContent }}
               />
@@ -50,7 +51,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
               </p>
             </div>
             <Link href={`/write/${result.id}`} passHref>
-              <button 
+              <button
                 className="btn btn-sm btn-outline"
                 onClick={(e) => e.stopPropagation()} // 防止触发卡片的点击事件
               >

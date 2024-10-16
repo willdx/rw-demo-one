@@ -102,3 +102,31 @@ export const replaceNodeContent = (
   // TODO: 请node?.content是否存在于fullContent中，输出日志
   return fullContent.replace(node?.content, newContent);
 };
+
+// 辅助函数：提取文件名（第一个一级标题）
+export const extractFileName = (content: string): string => {
+  const lines = content.split("\n");
+  for (const line of lines) {
+    if (line.startsWith("# ")) {
+      return line.substring(2).trim();
+    }
+  }
+  return "未命名文档";
+};
+
+export const highlightSearchResult = (content: string, query: string) => {
+  const regex = new RegExp(`(${query})`, "gi");
+  const words = content.split(" ");
+  const matchIndex = words.findIndex((word) => regex.test(word));
+
+  if (matchIndex === -1) return content.slice(0, 200) + "...";
+
+  const start = Math.max(0, matchIndex - 5);
+  const end = Math.min(words.length, matchIndex + 15);
+  let excerpt = words.slice(start, end).join(" ");
+
+  if (start > 0) excerpt = "..." + excerpt;
+  if (end < words.length) excerpt += "...";
+
+  return excerpt.replace(regex, "<mark>$1</mark>");
+};

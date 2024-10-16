@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
-import NodeTree from "../../components/NodeTree";
+import DocumentTree from "../../components/DocumentTree";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import {
   ChevronLeftIcon,
@@ -12,6 +12,7 @@ import {
   BookOpenIcon,
   SwatchIcon,
 } from "@heroicons/react/24/outline";
+import { useDocumentContext } from "@/app/contexts/DocumentContext";
 
 const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
   ssr: false,
@@ -23,6 +24,7 @@ const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
 });
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
+  const { selectedNode, setSelectedNode } = useDocumentContext();
   const [selectedContent, setSelectedContent] = useState<string>("");
   const [markdownTreeContent, setMarkdownTreeContent] = useState<string>("");
   const [selectedMarkdownContent, setSelectedMarkdownContent] =
@@ -72,7 +74,9 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   }, [activeTab]);
 
   const displayContent =
-    activeTab === "node" ? selectedContent : selectedMarkdownContent;
+    activeTab === "node"
+      ? selectedNode?.content || ""
+      : selectedMarkdownContent;
 
   const handleBgColorChange = (color: string) => {
     setBgColor(color);
@@ -113,10 +117,11 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           <div className="flex-grow overflow-hidden p-2">
             <ReactFlowProvider>
               {activeTab === "node" && (
-                <NodeTree
-                  onNodeClick={handleNodeTreeSelect}
+                <DocumentTree
+                  mode="read"
                   documentId={params.id}
-                  selectedContent={selectedContent}
+                  selectedNodeId={selectedNodeId}
+                  onNodeSelect={handleNodeSelect}
                 />
               )}
               {activeTab === "markdown" && markdownTreeContent && (

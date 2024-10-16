@@ -713,7 +713,7 @@ const WriteNodeTree: React.FC<WriteNodeTreeProps> = ({
         onNodeClick={handleNodeClick}
         onNodeContextMenu={onNodeContextMenu}
         onClick={closeContextMenu}
-        nodeTypes={nodeTypes}
+        // nodeTypes={nodeTypes}
         fitView
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}

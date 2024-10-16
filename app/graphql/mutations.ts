@@ -1,23 +1,8 @@
 import { gql } from "@apollo/client";
 
-export const PUBLISH_DOCUMENT = gql`
-  mutation PublishDocument($id: ID!) {
-    updateDocuments(where: { id: $id }, update: { isPublished: true }) {
-      info {
-        nodesCreated
-        nodesDeleted
-      }
-      documents {
-        id
-        isPublished
-      }
-    }
-  }
-`;
-
-export const UNPUBLISH_DOCUMENT = gql`
-  mutation UnpublishDocument($id: ID!) {
-    updateDocuments(where: { id: $id }, update: { isPublished: false }) {
+export const UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED = gql`
+  mutation UpdateDocumentIsPublished($id: ID!, $isPublished: Boolean!) {
+    updateDocuments(where: { id: $id }, update: { isPublished: $isPublished }) {
       info {
         nodesCreated
         nodesDeleted
