@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
-import DocumentTree from "../../components/DocumentTree";
+import DocumentTree from "../../components/ArticleTree";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import {
   ChevronLeftIcon,
@@ -13,6 +13,7 @@ import {
   SwatchIcon,
 } from "@heroicons/react/24/outline";
 import { useDocumentContext } from "@/app/contexts/DocumentContext";
+import ArticleTree from "../../components/ArticleTree";
 
 const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
   ssr: false,
@@ -30,7 +31,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   const [selectedMarkdownContent, setSelectedMarkdownContent] =
     useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"node" | "markdown">("node");
+  const [activeTab, setActiveTab] = useState<"article" | "chapter">("article");
   const [bgColor, setBgColor] = useState("#F7F7F7"); // 设置默认背景颜色
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -58,9 +59,9 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   }, []);
 
   const handleTabClick = useCallback(
-    (tab: "node" | "markdown") => {
+    (tab: "article" | "chapter") => {
       setActiveTab(tab);
-      if (tab === "markdown" && !selectedMarkdownContent) {
+      if (tab === "chapter" && !selectedMarkdownContent) {
         setSelectedMarkdownContent(selectedContent);
       }
     },
@@ -68,13 +69,13 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   );
 
   useEffect(() => {
-    if (activeTab === "node") {
+    if (activeTab === "article") {
       setSelectedMarkdownContent("");
     }
   }, [activeTab]);
 
   const displayContent =
-    activeTab === "node"
+    activeTab === "article"
       ? selectedNode?.content || ""
       : selectedMarkdownContent;
 
@@ -93,22 +94,22 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           <div className="flex border-b border-forest-border h-14">
             <button
               className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === "node"
+                activeTab === "article"
                   ? "text-forest-accent border-b-2 border-forest-accent"
                   : "text-forest-text hover:text-forest-accent"
               }`}
-              onClick={() => handleTabClick("node")}
+              onClick={() => handleTabClick("article")}
             >
               <BookOpenIcon className="w-5 h-5 mr-2 inline-block" />
               Aritcle
             </button>
             <button
               className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === "markdown"
+                activeTab === "chapter"
                   ? "text-forest-accent border-b-2 border-forest-accent"
                   : "text-forest-text hover:text-forest-accent"
               }`}
-              onClick={() => handleTabClick("markdown")}
+              onClick={() => handleTabClick("chapter")}
             >
               <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
               Chapter
@@ -116,15 +117,8 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           </div>
           <div className="flex-grow overflow-hidden p-2">
             <ReactFlowProvider>
-              {activeTab === "node" && (
-                <DocumentTree
-                  mode="read"
-                  documentId={params.id}
-                  selectedNodeId={selectedNodeId}
-                  onNodeSelect={handleNodeSelect}
-                />
-              )}
-              {activeTab === "markdown" && markdownTreeContent && (
+              {activeTab === "article" && <ArticleTree mode="read" />}
+              {activeTab === "chapter" && markdownTreeContent && (
                 <MarkdownTree
                   content={markdownTreeContent}
                   onNodeClick={handleMarkdownTreeSelect}

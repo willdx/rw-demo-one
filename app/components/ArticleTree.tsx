@@ -51,7 +51,7 @@ interface DocumentTreeProps {
   mode: "read" | "write";
 }
 
-const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
+const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const params = useParams();
   const documentId = params?.id as string;
   const { selectedNode, setSelectedNode } = useDocumentContext();
@@ -487,4 +487,4 @@ const DocumentTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   );
 };
 
-export default DocumentTree;
+export default ArticleTree;

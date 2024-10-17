@@ -1,18 +1,10 @@
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { SEARCH_DOCUMENTS } from "../../graphql/queries";
 import { UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED } from "../../graphql/mutations";
-import WriteMarkdownTree, {
-  WriteMarkdownTreeRef,
-} from "../../components/WriteMarkdownTree";
+import ChapterTree from "../../components/ChapterTree";
 import VditorEditor from "../../components/VditorEditor";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -27,29 +19,17 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
-import {
-  extractFileName,
-  highlightSearchResult,
-  replaceNodeContent,
-} from "../../utils/markdownUtils";
+import { highlightSearchResult } from "../../utils/markdownUtils";
 import SearchResults, { SearchResult } from "../../components/SearchResults";
 import { useInView } from "react-intersection-observer";
 import { useToast } from "../../contexts/ToastContext";
-import DocumentTree from "../../components/DocumentTree";
 import { useDocumentContext } from "@/app/contexts/DocumentContext";
+import ArticleTree from "../../components/ArticleTree";
 
 export default function WritePage() {
   const { token } = useAuth();
   const { showToast } = useToast();
   const { selectedNode, setSelectedNode } = useDocumentContext();
-
-  // markdown tree功能状态
-  const [fullContent, setFullContent] = useState("");
-  const fullContentRef = useRef("");
-  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
-    null
-  );
-  const writeMarkdownTreeRef = useRef<WriteMarkdownTreeRef>(null);
 
   // 搜索功能状态
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -112,7 +92,7 @@ export default function WritePage() {
         ({ node }: { node: any }) => ({
           ...node,
           matchedContent: highlightSearchResult(node.content, searchQuery),
-          updatedAt: node.updatedAt, // 确保包含 updatedAt 字段
+          updatedAt: node.updatedAt,
         })
       );
       setSearchResults((prevResults) => {
@@ -143,62 +123,6 @@ export default function WritePage() {
   const [updateDocumentIsPublished] = useMutation(
     UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
   );
-
-  const handleMarkdownNodeSelect = (nodeId: string, nodeContent: string) => {
-    setSelectedChapterId(nodeId);
-  };
-
-  // const debouncedUpdateDocument = useCallback(
-  //   debounce(async (updatedFullContent: string, updatedFileName: string) => {
-  //     if (selectedNode?.id) {
-  //       try {
-  //         await updateDocument({
-  //           variables: {
-  //             where: { id: selectedNode.id },
-  //             update: {
-  //               content: updatedFullContent,
-  //               fileName: updatedFileName,
-  //             },
-  //           },
-  //         });
-  //       } catch (error) {
-  //         console.error("Error updating document:", error);
-  //       }
-  //     }
-  //   }, 200),
-  //   [selectedNode?.id]
-  // );
-
-  // const handleContentChange = (
-  //   newContent: string,
-  //   chapterId: string | null
-  // ) => {
-  //   console.log(`handleContentChange 被调用，selectedNode: ${selectedNode}`);
-  //   console.log(`chapterId: ${chapterId}, 新内容长度: ${newContent.length}`);
-  //   let updatedFullContent = fullContentRef.current;
-  //   if (chapterId && chapterId !== "root") {
-  //     console.log(`更新章节内容，章节ID: ${chapterId}`);
-  //     console.log("原始全文内容:", updatedFullContent);
-  //     const parsedMarkdown =
-  //       writeMarkdownTreeRef.current?.getParsedMarkdown() || [];
-  //     console.log("####parsedMarkdown:", parsedMarkdown);
-  //     updatedFullContent = replaceNodeContent(
-  //       updatedFullContent,
-  //       parsedMarkdown,
-  //       chapterId,
-  //       newContent
-  //     );
-  //     console.log("更新后的全文内容:", updatedFullContent);
-  //   } else {
-  //     console.log("更新整个文档内容");
-  //     updatedFullContent = newContent;
-  //   }
-  //   setFullContent(updatedFullContent);
-  //   debouncedUpdateDocument(
-  //     updatedFullContent,
-  //     extractFileName(updatedFullContent)
-  //   );
-  // };
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 
@@ -312,14 +236,9 @@ export default function WritePage() {
             ) : (
               <ReactFlowProvider>
                 {activeTab === "node" ? (
-                  <DocumentTree mode="write" />
+                  <ArticleTree mode="write" />
                 ) : (
-                  <WriteMarkdownTree
-                    ref={writeMarkdownTreeRef}
-                    content={fullContent}
-                    onNodeSelect={handleMarkdownNodeSelect}
-                    selectedNodeId={selectedChapterId}
-                  />
+                  <ChapterTree />
                 )}
               </ReactFlowProvider>
             )}

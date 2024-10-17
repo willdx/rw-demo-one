@@ -1,5 +1,6 @@
 import { Node, Edge } from "@xyflow/react";
 import dagre from "dagre";
+import { MarkdownNode } from "./markdownUtils";
 
 // 常量定义
 const NODE_WIDTH = 200;
@@ -24,6 +25,7 @@ export interface FormattedDocumentNode {
   fileName: string;
   content: string;
   isPublished: boolean;
+  selectedChapter: MarkdownNode;
 }
 
 // 格式化图形数据
@@ -74,7 +76,6 @@ export const formatGraphData = (
   };
 
   processNode(document);
-  console.log("Nodes:", JSON.stringify(nodes, null, 2));
   return { nodes, edges };
 };
 

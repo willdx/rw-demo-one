@@ -28,7 +28,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   const showToast = (message: string, type: ToastType) => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 500);
+    setTimeout(() => setToast(null), 2000);
   };
 
   const getToastColor = (type: ToastType) => {

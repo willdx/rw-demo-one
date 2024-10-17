@@ -106,7 +106,6 @@ const formatGraphData = (
   };
 
   processNode(document);
-  console.log("Nodes:", JSON.stringify(nodes, null, 2));
   return { nodes, edges };
 };
 

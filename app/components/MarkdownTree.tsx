@@ -22,11 +22,12 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import { visit } from "unist-util-visit";
 import remarkStringify from "remark-stringify";
-
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 40;
-const HORIZONTAL_GAP = 50;
-const VERTICAL_GAP = 20;
+import {
+  HORIZONTAL_GAP,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  VERTICAL_GAP,
+} from "../utils/constant";
 
 interface MarkdownNode {
   id: string;

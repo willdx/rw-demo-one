@@ -26,7 +26,7 @@ export const parseMarkdown = (content: string): MarkdownNode[] => {
     fileName: "Document",
   };
   const stack: MarkdownNode[] = [docNode];
-  console.log("####tree:", tree);
+  // console.log("####tree:", tree);
 
   visit(tree, (node: UnistNode) => {
     if (node.type === "heading") {
@@ -52,11 +52,11 @@ export const parseMarkdown = (content: string): MarkdownNode[] => {
       if (stack.length > 1) {
         const currentNode = stack[stack.length - 1];
         const nodeContent = stringifier.stringify(node);
-        console.log("###stack.length - 1:", stack.length - 1);
-        console.log("####currentNode.content:", currentNode.content);
-        console.log("####nodeContent:", nodeContent);
+        // console.log("###stack.length - 1:", stack.length - 1);
+        // console.log("####currentNode.content:", currentNode.content);
+        // console.log("####nodeContent:", nodeContent);
         if (!currentNode.content.includes(nodeContent.trim())) {
-          console.log("##拼接...");
+          // console.log("#拼接...");
           currentNode.content += "\n\n" + nodeContent + "\n";
         }
       }
@@ -88,7 +88,6 @@ export const replaceNodeContent = (
   nodeId: string,
   newContent: string
 ): string => {
-  console.log("####parsedNodes:", parsedNodes);
   const node = findNodeById(parsedNodes, nodeId);
   console.log("####fullContent:", fullContent);
   console.log("####oldContent:", node?.content);
@@ -99,7 +98,6 @@ export const replaceNodeContent = (
   }
 
   // 使用字符串替换，确保只替换一次
-  // TODO: 请node?.content是否存在于fullContent中，输出日志
   return fullContent.replace(node?.content, newContent);
 };
 

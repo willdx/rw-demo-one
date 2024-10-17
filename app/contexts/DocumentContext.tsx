@@ -6,6 +6,8 @@ import { FormattedDocumentNode } from "../utils/treeUtils";
 interface DocumentContextType {
   selectedNode: FormattedDocumentNode | null;
   setSelectedNode: (node: FormattedDocumentNode | null) => void;
+  //   selectedChapter: FormattedDocumentNode | null;
+  //   setSelectedChapter: (node: FormattedDocumentNode | null) => void;
   // 可以添加更多共享状态
 }
 
@@ -28,9 +30,18 @@ export const DocumentProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [selectedNode, setSelectedNode] =
     useState<FormattedDocumentNode | null>(null);
+  //   const [selectedChapter, setSelectedChapter] =
+  // useState<FormattedDocumentNode | null>(null);
 
   return (
-    <DocumentContext.Provider value={{ selectedNode, setSelectedNode }}>
+    <DocumentContext.Provider
+      value={{
+        selectedNode,
+        setSelectedNode,
+        // selectedChapter,
+        // setSelectedChapter,
+      }}
+    >
       {children}
     </DocumentContext.Provider>
   );
