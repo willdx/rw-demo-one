@@ -32,6 +32,7 @@ import {
   dfsTraversal,
   getLayoutedElements,
   updateEdgeStylesOnNodeClick,
+  FormattedDocumentNode,
 } from "../utils/treeUtils";
 import { useQuery, useMutation } from "@apollo/client";
 import { createGetDocumentsQuery } from "../graphql/queries";
@@ -92,12 +93,17 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     skip: !documentId,
   });
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
     if (data?.documents?.length) {
       const { nodes, edges } = formatGraphData(data.documents[0], layout);
-      setSelectedNode(nodes[0]); // 默认选中第一个, 并且为格式化为树图之后的格式
       setNodes(nodes);
       setEdges(edges);
+      if (isFirstRender.current) {
+        setSelectedNode(nodes[0]);
+        isFirstRender.current = false;
+      }
     }
   }, [data, layout, setNodes, setEdges]);
 
@@ -120,7 +126,6 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     (event: React.MouseEvent, node: Node) => {
       console.log("handleNodeClick node:", node);
       setSelectedNode(node as DocumentNode);
-      //   console.log("handleNodeClick selectedNode:", selectedNode); // 还是之前的selectedNode
       setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
     },
     [setSelectedNode, nodes, setEdges]
@@ -140,9 +145,8 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
           console.log("dfsOrder:", dfsOrder);
           const nodeId = dfsOrder[newIndex];
           const node = nodes.find((n) => n.id === nodeId);
-          // 这里的formatGraphData之后的node类型和Graphql请求返回的DocumentNode类型不一样
           if (node) {
-            setSelectedNode(node as DocumentNode);
+            setSelectedNode(node as FormattedDocumentNode);
             setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
           }
           return newIndex;

@@ -13,7 +13,8 @@ const VditorEditor: React.FC = () => {
   const editorRef = useRef<Vditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
 
-  const { selectedNode, setSelectedNode } = useDocumentContext();
+  const { selectedNode } = useDocumentContext();
+  console.log("selectedNode:", selectedNode);
   const selectedNodeRef = useRef(selectedNode);
 
   const [updateDocumentContent] = useMutation(UPDATE_DOCUMENT_CONTENT);
@@ -35,7 +36,7 @@ const VditorEditor: React.FC = () => {
           console.error("更新文档时出错:", error);
         }
       }
-    }, 3000), // 编辑器内容变更后，3秒后更新数据库
+    }, 1000),
     [updateDocumentContent]
   );
 
@@ -54,9 +55,8 @@ const VditorEditor: React.FC = () => {
         },
         input: (value) => {
           console.log(`编辑器内容变更后数据长度: ${value.length}`);
-          console.log(`selectedNodeRef: ${selectedNodeRef.current?.id}`);
           debouncedUpdateDocumentContent(value, selectedNodeRef.current?.id);
-          setSelectedNode(selectedNodeRef.current);
+          // setSelectedNode(selectedNodeRef.current);
         },
       });
     }
