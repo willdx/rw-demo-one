@@ -1,12 +1,12 @@
 import { Node, Edge } from "@xyflow/react";
 import dagre from "dagre";
 import { MarkdownNode } from "./markdownUtils";
-
-// 常量定义
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 40;
-const HORIZONTAL_GAP = 50;
-const VERTICAL_GAP = 20;
+import {
+  HORIZONTAL_GAP,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  VERTICAL_GAP,
+} from "./constant";
 
 export interface DocumentNode {
   id: string;
@@ -85,6 +85,9 @@ export const updateEdgeStylesOnNodeClick = (
   nodes: Node[],
   edges: Edge[]
 ): Edge[] => {
+  console.log("selectedNodeId:", selectedNodeId);
+  console.log("nodes:", nodes);
+  console.log("edges:", edges);
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
   if (!selectedNode) return edges;
 

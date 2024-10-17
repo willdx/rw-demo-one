@@ -28,12 +28,15 @@ import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import dagre from "dagre";
 import { parseMarkdown, MarkdownNode } from "../utils/markdownUtils";
 import { useDocumentContext } from "../contexts/DocumentContext";
-import { dfsTraversal, updateEdgeStylesOnNodeClick } from "../utils/treeUtils";
+import {
+  dfsTraversal,
+  FormattedDocumentNode,
+  updateEdgeStylesOnNodeClick,
+} from "../utils/treeUtils";
 import CustomNode from "./CustomNode";
 
 const ChapterTree: React.FC = () => {
   const { selectedNode, setSelectedNode } = useDocumentContext();
-  // const { selectedChapter, setSelectedChapter } = useDocumentContext();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView } = useReactFlow();
@@ -110,7 +113,7 @@ const ChapterTree: React.FC = () => {
       setNodes(updatedNodes);
 
       const updatedEdges = updateEdgeStylesOnNodeClick(
-        selectedNode?.id || updatedNodes[0].id,
+        selectedNode?.selectedChapter?.id || updatedNodes[0].id,
         updatedNodes,
         layoutedEdges
       );
@@ -127,47 +130,38 @@ const ChapterTree: React.FC = () => {
   }, [updateNodesAndEdges]);
 
   const [dfsOrder, setDfsOrder] = useState<string[]>([]);
-  const [currentDfsIndex, setCurrentDfsIndex] = useState<number>(0);
 
   useEffect(() => {
     if (nodes.length > 0 && edges.length > 0) {
       const order = dfsTraversal(nodes, edges);
       setDfsOrder(order);
-      setCurrentDfsIndex(
-        order.findIndex((id) => id === selectedNode?.id || null) || 0
-      );
     }
-  }, [nodes, edges, selectedNode]);
+  }, [nodes, edges]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (selectedNode) {
-        if (event.key === "ArrowLeft") {
-          setCurrentDfsIndex((prevIndex) => {
-            const newIndex = Math.max(prevIndex - 1, 0);
-            const nodeId = dfsOrder[newIndex];
-            const selectedChapter = nodes.find((n) => n.id === nodeId);
-            if (selectedChapter) {
-              selectedNode.selectedChapter = selectedChapter;
-              setSelectedNode(selectedNode);
-            }
-            return newIndex;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const currentIndex = selectedNode?.selectedChapter?.id
+          ? dfsOrder.findIndex((id) => id === selectedNode?.selectedChapter?.id)
+          : 0;
+
+        const newIndex =
+          event.key === "ArrowLeft"
+            ? Math.max(currentIndex - 1, 0)
+            : Math.min(currentIndex + 1, dfsOrder.length - 1);
+
+        const nodeId = dfsOrder[newIndex];
+        const node = nodes.find((n) => n.id === nodeId);
+        if (node) {
+          setSelectedNode({
+            ...selectedNode,
+            selectedChapter: node,
           });
-        } else if (event.key === "ArrowRight") {
-          setCurrentDfsIndex((prevIndex) => {
-            const newIndex = Math.min(prevIndex + 1, dfsOrder.length - 1);
-            const nodeId = dfsOrder[newIndex];
-            const selectedChapter = nodes.find((n) => n.id === nodeId);
-            if (selectedChapter) {
-              selectedNode.selectedChapter = selectedChapter;
-              setSelectedNode(selectedNode);
-            }
-            return newIndex;
-          });
+          setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
         }
       }
     },
-    [dfsOrder, nodes, setSelectedNode]
+    [dfsOrder, nodes, selectedNode, setSelectedNode, setEdges]
   );
 
   useEffect(() => {
@@ -185,10 +179,10 @@ const ChapterTree: React.FC = () => {
           ...selectedNode,
           selectedChapter: node,
         });
-        setCurrentDfsIndex(dfsOrder.findIndex((id) => id === node.id));
+        setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
       }
     },
-    [selectedNode, setSelectedNode, dfsOrder, setCurrentDfsIndex]
+    [selectedNode, setSelectedNode, dfsOrder]
   );
 
   return (

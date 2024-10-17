@@ -47,6 +47,7 @@ import { useToast } from "../contexts/ToastContext";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 import TreeSkeleton from "./TreeSkeleton";
+import { nodeTypes } from "../utils/constant";
 
 interface DocumentTreeProps {
   mode: "read" | "write";
@@ -400,9 +401,6 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [closeContextMenu, handleKeyDown]);
-
-  // 设定节点的样式
-  const nodeTypes = { customNode: CustomNode };
 
   if (loading) return <TreeSkeleton />;
   if (error)

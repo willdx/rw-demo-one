@@ -14,6 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
+import ChapterTree from "@/app/components/ChapterTree";
 
 const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
   ssr: false,
@@ -118,15 +119,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           <div className="flex-grow overflow-hidden p-2">
             <ReactFlowProvider>
               {activeTab === "article" && <ArticleTree mode="read" />}
-              {activeTab === "chapter" && markdownTreeContent && (
-                <MarkdownTree
-                  content={markdownTreeContent}
-                  onNodeClick={handleMarkdownTreeSelect}
-                  selectedContent={selectedMarkdownContent}
-                  onNodeSelect={handleNodeSelect}
-                  updateTrigger={0} // 或者使用一个状态变量来触发更新
-                />
-              )}
+              {activeTab === "chapter" && <ChapterTree />}
             </ReactFlowProvider>
           </div>
         </div>
@@ -168,7 +161,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           style={{ backgroundColor: bgColor }}
         >
           {displayContent ? (
-            <MarkdownRenderer content={displayContent} />
+            <MarkdownRenderer />
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-forest-text opacity-50 italic text-center">

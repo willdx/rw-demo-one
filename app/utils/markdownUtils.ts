@@ -27,13 +27,14 @@ export const parseMarkdown = (content: string): MarkdownNode[] => {
   };
   const stack: MarkdownNode[] = [docNode];
   // console.log("####tree:", tree);
+  let nodeIdCounter = 0;
 
   visit(tree, (node: UnistNode) => {
     if (node.type === "heading") {
       const headingNode = node as UnistNode & { depth: number };
       const headingContent = stringifier.stringify(node).trim();
       const newNode: MarkdownNode = {
-        id: `h-${uuid()}`,
+        id: `Chapter-${nodeIdCounter++}`, // 使用递增的序列号
         content: headingContent,
         children: [],
         depth: headingNode.depth,

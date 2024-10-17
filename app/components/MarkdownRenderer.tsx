@@ -6,15 +6,19 @@ import rehypeKatex from "rehype-katex";
 import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import "katex/dist/katex.min.css";
+import { useDocumentContext } from "../contexts/DocumentContext";
 
-interface MarkdownRendererProps {
-  content: string;
-}
+const MarkdownRenderer: React.FC<{}> = () => {
+  const { selectedNode } = useDocumentContext();
+  console.log("selectedNode:", selectedNode);
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   return (
-    <div className="h-full p-4 overflow-auto grid place-items-center"> {/* 使用 Grid 布局 */}
-      <div className="prose prose-forest dark:prose-invert max-w-3xl bg-forest-content p-8 rounded-lg shadow-sm border border-forest-border w-full"> {/* 内层容器用于控制宽度和样式 */}
+    <div className="h-full p-4 overflow-auto grid place-items-center">
+      {" "}
+      {/* 使用 Grid 布局 */}
+      <div className="prose prose-forest dark:prose-invert max-w-3xl bg-forest-content p-8 rounded-lg shadow-sm border border-forest-border w-full">
+        {" "}
+        {/* 内层容器用于控制宽度和样式 */}
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex]}
@@ -46,7 +50,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
                   {String(children).replace(/\n$/, "")}
                 </SyntaxHighlighter>
               ) : (
-                <code className={`${className} bg-forest-code-bg text-forest-code rounded px-1`} {...props}>
+                <code
+                  className={`${className} bg-forest-code-bg text-forest-code rounded px-1`}
+                  {...props}
+                >
                   {children}
                 </code>
               );
@@ -55,14 +62,23 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
               return <table className="border-collapse w-full" {...props} />;
             },
             th({ node, ...props }) {
-              return <th className="border border-forest-border p-2 bg-forest-bg font-semibold" {...props} />;
+              return (
+                <th
+                  className="border border-forest-border p-2 bg-forest-bg font-semibold"
+                  {...props}
+                />
+              );
             },
             td({ node, ...props }) {
-              return <td className="border border-forest-border p-2" {...props} />;
+              return (
+                <td className="border border-forest-border p-2" {...props} />
+              );
             },
           }}
         >
-          {content}
+          {selectedNode?.selectedChapter
+            ? selectedNode.selectedChapter.content
+            : selectedNode?.content}
         </ReactMarkdown>
       </div>
     </div>
