@@ -43,6 +43,19 @@ const typeDefs = gql`
     id: ID! @id
     fileName: String!
     content: String!
+    fileSize: Int @default(value: 0)
+    fileSource: String @default(value: "local file")
+    fileType: String @default(value: "md")
+    is_cancelled: Boolean @default(value: false)
+    model: String @default(value: "通义千问")
+    nodeCount: Int @default(value: 0)
+    processed_chunk: Int @default(value: 0)
+    processingTime: Int @default(value: 0)
+    relationshipCount: Int @default(value: 0)
+    status: String @default(value: "New")
+    total_chunks: Int @default(value: 0)
+    total_pages: Int @default(value: 1)
+    errorMessage: String
     createdAt: DateTime! @timestamp(operations: [CREATE])
     updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
     deletedAt: DateTime
