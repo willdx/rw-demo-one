@@ -77,7 +77,7 @@ const MarkdownRenderer: React.FC<{}> = () => {
           }}
         >
           {selectedNode?.selectedChapter
-            ? selectedNode.selectedChapter.content
+            ? selectedNode.selectedChapter?.data?.content
             : selectedNode?.content}
         </ReactMarkdown>
       </div>

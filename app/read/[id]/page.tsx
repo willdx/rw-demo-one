@@ -160,7 +160,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           className="flex-grow overflow-auto p-4 rounded-md shadow-md transition-colors duration-200"
           style={{ backgroundColor: bgColor }}
         >
-          {displayContent ? (
+          {selectedNode ? (
             <MarkdownRenderer />
           ) : (
             <div className="flex items-center justify-center h-full">
