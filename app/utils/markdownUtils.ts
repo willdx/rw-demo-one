@@ -19,11 +19,11 @@ export const parseMarkdown = (content: string): MarkdownNode[] => {
   const stringifier = unified().use(remarkStringify);
 
   const docNode: MarkdownNode = {
-    id: "doc",
+    id: "Article",
     content,
     children: [],
     depth: 0,
-    fileName: "Document",
+    fileName: "Article",
   };
   const stack: MarkdownNode[] = [docNode];
   // console.log("####tree:", tree);
