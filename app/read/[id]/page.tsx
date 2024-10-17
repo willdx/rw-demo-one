@@ -16,15 +16,6 @@ import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
 import ChapterTree from "@/app/components/ChapterTree";
 
-const MarkdownTree = dynamic(() => import("../../components/MarkdownTree"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-forest-bg">
-      <span className="loading loading-dots loading-lg text-forest-accent"></span>
-    </div>
-  ),
-});
-
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const { selectedNode, setSelectedNode } = useDocumentContext();
   const [selectedContent, setSelectedContent] = useState<string>("");
@@ -33,7 +24,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
     useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"article" | "chapter">("article");
-  const [bgColor, setBgColor] = useState("#F7F7F7"); // 设置默认背景颜色
+  const [bgColor, setBgColor] = useState("#CEECCF"); // 设置默认背景颜色
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
