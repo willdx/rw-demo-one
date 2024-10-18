@@ -8,6 +8,7 @@ export const GET_DOCUMENT = gql`
       id
       fileName
       content
+      status
       isPublished
     }
   }
@@ -23,6 +24,8 @@ export const UPDATE_DOCUMENT_CONTENT = gql`
         id
         fileName
         content
+        status
+        isPublished
       }
     }
   }
@@ -49,6 +52,8 @@ export const GET_PUBLISHED_DOCUMENTS = gql`
           id
           fileName
           content
+          status
+          isPublished
           creator {
             id
           }
@@ -80,6 +85,8 @@ export const SEARCH_DOCUMENTS = gql`
           fileName
           content
           updatedAt
+          status
+          isPublished
           creator {
             id
           }
@@ -99,6 +106,8 @@ export const GET_USER_ROOT_DOCUMENT = gql`
       id
       fileName
       content
+      status
+      isPublished
       creator {
         id
       }
@@ -129,6 +138,7 @@ export const createGetDocumentsQuery = (maxDepth: number) => gql`
     id
     fileName
     content
+    status
     isPublished
     parent {
       id

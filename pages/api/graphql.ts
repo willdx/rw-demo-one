@@ -11,6 +11,7 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "@apollo/server-p
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { NextApiRequest, NextApiResponse } from "next";
+import axios from "axios";
 
 const typeDefs = gql`
   type User {
@@ -78,11 +79,17 @@ const typeDefs = gql`
     signIn(email: String!, password: String!): AuthPayload!
     createInitialRoles: Boolean!
     deleteDocumentsAndChildren(id: ID!): Boolean!
+    generateKnowledgeGraph(documentId: ID!): KnowledgeGraphResult!
   }
 
   type AuthPayload {
     token: String!
     user: User!
+  }
+
+  type KnowledgeGraphResult {
+    success: Boolean!
+    message: String
   }
 `;
 
@@ -219,6 +226,57 @@ const neoSchema = new Neo4jGraphQL({
           return false;
         } finally {
           await session.close();
+        }
+      },
+
+      generateKnowledgeGraph: async (_, { documentId }, context) => {
+        try {
+          // TODO: 使用ogm来优化，而不是直接执行cypher
+          // const session = context.driver.session();
+          // const result = await session.run(
+          //   `
+          //   MATCH (d:Document {id: $documentId})
+          //   RETURN d
+          //   `,
+          //   { documentId }
+          // );
+
+          // if (result.records.length === 0) {
+          //   return { success: false, message: "未找到指定文档" };
+          // }
+
+          // const document = result.records[0].get("d").properties;
+
+          const formData = new FormData();
+          formData.append("uri", process.env.NEO4J_URI);
+          formData.append("userName", process.env.NEO4J_USERNAME);
+          formData.append(
+            "password",
+            process.env.NEO4J_PASSWORD
+          ); // TODO: 优化接口，不传递密码
+          formData.append("database", process.env.NEO4J_DATEBASE);
+          formData.append("port", process.env.NEO4J_PORT);
+          formData.append("model", "通义千问");
+          formData.append("source_type", "db_content");
+          formData.append(
+            "allowedNodes",
+            "Document,Application,DataCenter,Egress,Interface,Machine,Network,OS,Port,Process,Rack,Router,Service,Software,Switch,Type,Version,Zone"
+          );
+          formData.append(
+            "allowedRelationship",
+            "CONNECTS,CONTAINS,DEPENDS_ON,EXPOSES,HOLDS,INSTANCE,LISTENS,PREVIOUS,ROUTES,RUNS,TYPE,VERSION"
+          );
+          formData.append("unique_id", documentId);
+
+          await axios.post("http://localhost:8000/extract", formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+          return { success: true, message: "知识图谱生成成功" };
+        } catch (error) {
+          console.error("生成知识图谱时出错:", error);
+          return { success: false, message: "生成知识图谱失败，请稍后重试" };
         }
       },
     },

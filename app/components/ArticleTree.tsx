@@ -34,7 +34,7 @@ import {
   updateEdgeStylesOnNodeClick,
   FormattedDocumentNode,
 } from "../utils/treeUtils";
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery, useMutation, gql } from "@apollo/client";
 import { createGetDocumentsQuery } from "../graphql/queries";
 import {
   CHANGE_DOCUMENT_PARENT,
@@ -52,6 +52,15 @@ import { nodeTypes } from "../utils/constant";
 interface DocumentTreeProps {
   mode: "read" | "write";
 }
+
+const GENERATE_KNOWLEDGE_GRAPH = gql`
+  mutation GenerateKnowledgeGraph($documentId: ID!) {
+    generateKnowledgeGraph(documentId: $documentId) {
+      success
+      message
+    }
+  }
+`;
 
 const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const params = useParams();
@@ -241,7 +250,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const handleNodeMove = useCallback(
     async (node: Node, newParentId: string) => {
       const oldParentId = node?.parent?.id;
-      console.log(`handleNodeMove 被调用，node: ${JSON.stringify(node)}`);
+      console.log(`handleNodeMove 被调用���node: ${JSON.stringify(node)}`);
       console.log(`oldParentId: ${oldParentId}, newParentId: ${newParentId}`);
 
       if (oldParentId === newParentId) {
@@ -392,6 +401,27 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     }
   }, [contextMenu, handleDeleteNode, closeContextMenu]);
 
+  const [generateKnowledgeGraph, { loading: generatingGraph }] = useMutation(GENERATE_KNOWLEDGE_GRAPH, {
+    onCompleted: (data) => {
+      if (data.generateKnowledgeGraph.success) {
+        showToast('知识图谱生成成功', 'success');
+      } else {
+        showToast(data.generateKnowledgeGraph.message || '生成知识图谱失败', 'error');
+      }
+    },
+    onError: (error) => {
+      console.error('生成知识图谱时出错:', error);
+      showToast('生成知识图谱失败，请稍后重试', 'error');
+    },
+  });
+
+  const handleGenerateGraph = useCallback(() => {
+    if (contextMenu) {
+      generateKnowledgeGraph({ variables: { documentId: contextMenu.nodeId } });
+      closeContextMenu();
+    }
+  }, [contextMenu, generateKnowledgeGraph, closeContextMenu]);
+
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
     document.addEventListener("click", handleClickOutside);
@@ -462,25 +492,24 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
           y={contextMenu.y}
           onClose={closeContextMenu}
         >
-          <li>
-            <Link
-              href={`/${mode}/${contextMenu.nodeId}`}
-              onClick={closeContextMenu}
-            >
-              <span>从当前节点打开</span>
-            </Link>
-          </li>
+          <Link
+            href={`/${mode}/${contextMenu.nodeId}`}
+            onClick={closeContextMenu}
+          >
+            从当前节点打开
+          </Link>
           {mode === "write" && (
             <>
-              <li>
-                <a onClick={handleAddChildNode}>添加子节点</a>
-              </li>
-              <li>
-                <a onClick={handleAddSiblingNode}>添加同级节点</a>
-              </li>
-              <li>
-                <a onClick={handleDeleteNodeFromMenu}>删除节点</a>
-              </li>
+              <a onClick={handleAddChildNode}>添加子节点</a>
+              <a onClick={handleAddSiblingNode}>添加同级节点</a>
+              <a onClick={handleDeleteNodeFromMenu}>删除节点</a>
+              <a 
+                onClick={handleGenerateGraph}
+                className={`${generatingGraph ? 'opacity-50 cursor-not-allowed' : ''}`}
+                data-tip={generatingGraph ? '正在生成知识图谱' : '生成知识图谱'}
+              >
+                生成知识图谱
+              </a>
             </>
           )}
         </ContextMenu>

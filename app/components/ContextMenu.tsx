@@ -14,7 +14,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onClose, children }) =>
       style={{ left: x, top: y }}
     >
       <ul className="menu bg-base-200 rounded-box w-56 shadow-lg">
-        {children}
+        {React.Children.map(children, (child) => {
+          if (React.isValidElement(child)) {
+            return (
+              <li className="tooltip" data-tip={child.props['data-tip']}>
+                {React.cloneElement(child, { className: 'menu-item' })}
+              </li>
+            );
+          }
+          return child;
+        })}
       </ul>
     </div>
   );
