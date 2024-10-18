@@ -9,7 +9,7 @@ import { UPDATE_DOCUMENT_CONTENT } from "../graphql/queries";
 import { extractFileName } from "../utils/markdownUtils";
 
 // 自定义 hook 用于滑动窗口保存机制
-function useSlideWindowSave(saveFunction: () => void, delay: number = 3000) {
+function useSlideWindowSave(saveFunction: () => void, delay: number = 10000) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const scheduleNextSave = useCallback(() => {
@@ -53,7 +53,11 @@ const VditorEditor: React.FC = () => {
   const [updateDocumentContent] = useMutation(UPDATE_DOCUMENT_CONTENT);
 
   const saveContent = useCallback(async () => {
-    if (editorRef.current && selectedNodeRef.current && contentModifiedRef.current) {
+    if (
+      editorRef.current &&
+      selectedNodeRef.current &&
+      contentModifiedRef.current
+    ) {
       const content = editorRef.current.getValue();
       try {
         await updateDocumentContent({
@@ -118,7 +122,9 @@ const VditorEditor: React.FC = () => {
   useEffect(() => {
     if (isEditorReady && editorRef.current && selectedNode) {
       const content =
-        selectedNode.selectedChapter?.content || selectedNode.content || "";
+        selectedNode.selectedChapter?.data?.content ||
+        selectedNode.content ||
+        "";
       console.log(`编辑器旧数据长度（未手动更新前）: ${content.length}`);
       editorRef.current.setValue(content);
       selectedNodeRef.current = selectedNode;
