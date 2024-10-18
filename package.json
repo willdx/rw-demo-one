@@ -30,6 +30,7 @@
     "axios": "^1.7.7",
     "bcrypt": "^5.1.1",
     "dagre": "^0.8.5",
+    "framer-motion": "^11.11.9",
     "graphql": "^16.9.0",
     "graphql-playground-middleware-express": "^1.7.23",
     "graphql-tag": "^2.12.6",

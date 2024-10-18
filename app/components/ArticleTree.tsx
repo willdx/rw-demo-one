@@ -48,6 +48,7 @@ import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 import TreeSkeleton from "./TreeSkeleton";
 import { nodeTypes } from "../utils/constant";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface DocumentTreeProps {
   mode: "read" | "write";
@@ -394,42 +395,55 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     }
   }, [contextMenu, handleAddNode, nodes, edges, closeContextMenu]);
 
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isGenerateGraphDialogOpen, setIsGenerateGraphDialogOpen] = useState(false);
+
+  const [generateKnowledgeGraph, { loading: generatingGraph }] = useMutation(
+    GENERATE_KNOWLEDGE_GRAPH,
+    {
+      onCompleted: (data) => {
+        if (data.generateKnowledgeGraph.success) {
+          showToast("知识图谱生成成功", "success");
+        } else {
+          showToast(
+            data.generateKnowledgeGraph.message || "生成知识图谱失败",
+            "error"
+          );
+        }
+      },
+      onError: (error) => {
+        console.error("生成知识图谱时出错:", error);
+        showToast("生成知识图谱失败，请稍后重试", "error");
+      },
+    }
+  );
+
   const handleDeleteNodeFromMenu = useCallback(() => {
-    if (contextMenu) {
-      handleDeleteNode(contextMenu.nodeId);
+    if (contextMenu && selectedNode) {
+      setIsDeleteDialogOpen(true);
       closeContextMenu();
     }
-  }, [contextMenu, handleDeleteNode, closeContextMenu]);
+  }, [contextMenu, selectedNode, closeContextMenu]);
 
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [confirmDialogNodeId, setConfirmDialogNodeId] = useState<string | null>(null);
-
-  const [generateKnowledgeGraph, { loading: generatingGraph }] = useMutation(GENERATE_KNOWLEDGE_GRAPH, {
-    onCompleted: (data) => {
-      if (data.generateKnowledgeGraph.success) {
-        showToast('知识图谱生成成功', 'success');
-      } else {
-        showToast(data.generateKnowledgeGraph.message || '生成知识图谱失败', 'error');
-      }
-    },
-    onError: (error) => {
-      console.error('生成知识图谱时出错:', error);
-      showToast('生成知识图谱失败，请稍后重试', 'error');
-    },
-  });
-
-  const handleGenerateGraph = useCallback(() => {
-    if (confirmDialogNodeId) {
-      generateKnowledgeGraph({ variables: { documentId: confirmDialogNodeId } });
-      setIsConfirmDialogOpen(false);
-      setConfirmDialogNodeId(null);
+  const confirmDeleteNode = useCallback(() => {
+    if (selectedNode) {
+      handleDeleteNode(selectedNode.id);
+      setIsDeleteDialogOpen(false);
     }
-  }, [confirmDialogNodeId, generateKnowledgeGraph]);
+  }, [selectedNode, handleDeleteNode]);
 
-  const openConfirmDialog = useCallback((nodeId: string) => {
-    setConfirmDialogNodeId(nodeId);
-    setIsConfirmDialogOpen(true);
-  }, []);
+  const openGenerateGraphDialog = useCallback(() => {
+    if (selectedNode) {
+      setIsGenerateGraphDialogOpen(true);
+    }
+  }, [selectedNode]);
+
+  const confirmGenerateGraph = useCallback(() => {
+    if (selectedNode) {
+      generateKnowledgeGraph({ variables: { documentId: selectedNode.id } });
+      setIsGenerateGraphDialogOpen(false);
+    }
+  }, [selectedNode, generateKnowledgeGraph]);
 
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
@@ -513,7 +527,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
               <a onClick={handleAddSiblingNode}>添加同级节点</a>
               <a onClick={handleDeleteNodeFromMenu}>删除节点</a>
               <a 
-                onClick={() => openConfirmDialog(contextMenu.nodeId)}
+                onClick={openGenerateGraphDialog}
                 className={`${generatingGraph ? 'opacity-50 cursor-not-allowed' : ''}`}
                 data-tip={generatingGraph ? '正在生成知识图谱' : '生成知识图谱'}
               >
@@ -524,29 +538,26 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         </ContextMenu>
       )}
 
-      {/* 确认对话框 */}
-      {isConfirmDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl">
-            <h3 className="text-lg font-bold mb-4">确认生成知识图谱</h3>
-            <p className="mb-4">确定要生成知识图谱吗？这个操作可能需要一些时间。</p>
-            <div className="flex justify-end space-x-2">
-              <button
-                className="btn btn-ghost"
-                onClick={() => setIsConfirmDialogOpen(false)}
-              >
-                取消
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleGenerateGraph}
-              >
-                确定
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDeleteNode}
+        title={`确认删除节点: ${selectedNode?.fileName}`}
+        content={`此操作将删除节点 "${selectedNode?.fileName}" 及其所有子节点，且不可撤销。确定要删除吗？`}
+        confirmText="删除"
+        cancelText="取消"
+        confirmButtonClass="btn-error"
+      />
+
+      <ConfirmDialog
+        isOpen={isGenerateGraphDialogOpen}
+        onClose={() => setIsGenerateGraphDialogOpen(false)}
+        onConfirm={confirmGenerateGraph}
+        title={`确认生成知识图谱: ${selectedNode?.fileName}`}
+        content={`确定要为节点 "${selectedNode?.fileName}" 生成知识图谱吗？这个操作可能需要一些时间。`}
+        confirmText="生成"
+        cancelText="取消"
+      />
 
       {/* 加载指示器 */}
       {generatingGraph && (

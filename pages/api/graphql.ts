@@ -231,31 +231,21 @@ const neoSchema = new Neo4jGraphQL({
 
       generateKnowledgeGraph: async (_, { documentId }, context) => {
         try {
-          // TODO: 使用ogm来优化，而不是直接执行cypher
-          // const session = context.driver.session();
-          // const result = await session.run(
-          //   `
-          //   MATCH (d:Document {id: $documentId})
-          //   RETURN d
-          //   `,
-          //   { documentId }
-          // );
+          const documents = await Document.find({
+            where: { id: documentId },
+            options: { limit: 1 },
+            selectionSet: "{ id }",
+          });
 
-          // if (result.records.length === 0) {
-          //   return { success: false, message: "未找到指定文档" };
-          // }
-
-          // const document = result.records[0].get("d").properties;
-
+          if (documents.length === 0) {
+            return { success: false, message: "未找到指定文档" };
+          }
           const formData = new FormData();
-          formData.append("uri", process.env.NEO4J_URI);
-          formData.append("userName", process.env.NEO4J_USERNAME);
-          formData.append(
-            "password",
-            process.env.NEO4J_PASSWORD
-          ); // TODO: 优化接口，不传递密码
-          formData.append("database", process.env.NEO4J_DATEBASE);
-          formData.append("port", process.env.NEO4J_PORT);
+          formData.append("uri", process.env.NEO4J_URI || "");
+          formData.append("userName", process.env.NEO4J_USERNAME || "");
+          formData.append("password", process.env.NEO4J_PASSWORD || "");
+          formData.append("database", process.env.NEO4J_DATEBASE || "");
+          formData.append("port", process.env.NEO4J_PORT || "");
           formData.append("model", "通义千问");
           formData.append("source_type", "db_content");
           formData.append(
