@@ -250,7 +250,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const handleNodeMove = useCallback(
     async (node: Node, newParentId: string) => {
       const oldParentId = node?.parent?.id;
-      console.log(`handleNodeMove 被调用���node: ${JSON.stringify(node)}`);
+      console.log(`handleNodeMove 被调用node: ${JSON.stringify(node)}`);
       console.log(`oldParentId: ${oldParentId}, newParentId: ${newParentId}`);
 
       if (oldParentId === newParentId) {
@@ -401,6 +401,9 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     }
   }, [contextMenu, handleDeleteNode, closeContextMenu]);
 
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [confirmDialogNodeId, setConfirmDialogNodeId] = useState<string | null>(null);
+
   const [generateKnowledgeGraph, { loading: generatingGraph }] = useMutation(GENERATE_KNOWLEDGE_GRAPH, {
     onCompleted: (data) => {
       if (data.generateKnowledgeGraph.success) {
@@ -416,11 +419,17 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   });
 
   const handleGenerateGraph = useCallback(() => {
-    if (contextMenu) {
-      generateKnowledgeGraph({ variables: { documentId: contextMenu.nodeId } });
-      closeContextMenu();
+    if (confirmDialogNodeId) {
+      generateKnowledgeGraph({ variables: { documentId: confirmDialogNodeId } });
+      setIsConfirmDialogOpen(false);
+      setConfirmDialogNodeId(null);
     }
-  }, [contextMenu, generateKnowledgeGraph, closeContextMenu]);
+  }, [confirmDialogNodeId, generateKnowledgeGraph]);
+
+  const openConfirmDialog = useCallback((nodeId: string) => {
+    setConfirmDialogNodeId(nodeId);
+    setIsConfirmDialogOpen(true);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
@@ -504,7 +513,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
               <a onClick={handleAddSiblingNode}>添加同级节点</a>
               <a onClick={handleDeleteNodeFromMenu}>删除节点</a>
               <a 
-                onClick={handleGenerateGraph}
+                onClick={() => openConfirmDialog(contextMenu.nodeId)}
                 className={`${generatingGraph ? 'opacity-50 cursor-not-allowed' : ''}`}
                 data-tip={generatingGraph ? '正在生成知识图谱' : '生成知识图谱'}
               >
@@ -513,6 +522,37 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
             </>
           )}
         </ContextMenu>
+      )}
+
+      {/* 确认对话框 */}
+      {isConfirmDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <h3 className="text-lg font-bold mb-4">确认生成知识图谱</h3>
+            <p className="mb-4">确定要生成知识图谱吗？这个操作可能需要一些时间。</p>
+            <div className="flex justify-end space-x-2">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setIsConfirmDialogOpen(false)}
+              >
+                取消
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleGenerateGraph}
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 加载指示器 */}
+      {generatingGraph && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+        </div>
       )}
     </div>
   );
