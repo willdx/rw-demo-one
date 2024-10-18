@@ -45,6 +45,7 @@ const VditorEditor: React.FC = () => {
   const editorRef = useRef<Vditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"已保存" | "未保存">("已保存");
+  const contentModifiedRef = useRef(false);
 
   const { selectedNode, setSelectedNode } = useDocumentContext();
   const selectedNodeRef = useRef(selectedNode);
@@ -52,7 +53,7 @@ const VditorEditor: React.FC = () => {
   const [updateDocumentContent] = useMutation(UPDATE_DOCUMENT_CONTENT);
 
   const saveContent = useCallback(async () => {
-    if (editorRef.current && selectedNodeRef.current) {
+    if (editorRef.current && selectedNodeRef.current && contentModifiedRef.current) {
       const content = editorRef.current.getValue();
       try {
         await updateDocumentContent({
@@ -64,8 +65,7 @@ const VditorEditor: React.FC = () => {
             },
           },
         });
-        // 更新 DocumentContext 中的 selectedNode
-        setSelectedNode((prevNode) => {
+        setSelectedNode((prevNode: any) => {
           if (prevNode) {
             return {
               ...prevNode,
@@ -77,6 +77,7 @@ const VditorEditor: React.FC = () => {
         });
         console.log("内容已保存");
         setSaveStatus("已保存");
+        contentModifiedRef.current = false;
       } catch (error) {
         console.error("保存文档时出错:", error);
         setSaveStatus("未保存");
@@ -84,7 +85,8 @@ const VditorEditor: React.FC = () => {
     }
   }, [updateDocumentContent, setSelectedNode]);
 
-  const { scheduleNextSave, triggerImmediateSave } = useSlideWindowSave(saveContent);
+  const { scheduleNextSave, triggerImmediateSave } =
+    useSlideWindowSave(saveContent);
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -100,11 +102,14 @@ const VditorEditor: React.FC = () => {
           setIsEditorReady(true);
         },
         input: () => {
+          contentModifiedRef.current = true;
           scheduleNextSave();
           setSaveStatus("未保存");
         },
         blur: () => {
-          triggerImmediateSave();
+          if (contentModifiedRef.current) {
+            triggerImmediateSave();
+          }
         },
       });
     }
@@ -118,10 +123,11 @@ const VditorEditor: React.FC = () => {
       editorRef.current.setValue(content);
       selectedNodeRef.current = selectedNode;
       setSaveStatus("已保存");
+      contentModifiedRef.current = false;
     }
   }, [isEditorReady, selectedNode]);
 
-  return  (
+  return (
     <div className="relative h-full w-full">
       <div id="vditor" className="h-full w-full" />
       <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded shadow">
