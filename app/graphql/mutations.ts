@@ -80,3 +80,27 @@ export const CHANGE_DOCUMENT_PARENT = gql`
     }
   }
 `;
+
+export const AI_CHAT = gql`
+  mutation AiChat($message: String!) {
+    aiChat(message: $message) {
+      status
+      data {
+        session_id
+        message
+        info {
+          sources
+          model
+          chunkdetails {
+            id
+            score
+          }
+          total_tokens
+          response_time
+          mode
+        }
+        user
+      }
+    }
+  }
+`;

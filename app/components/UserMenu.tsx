@@ -31,11 +31,8 @@ export default function UserMenu({ onLogout }: UserMenuProps) {
         tabIndex={0}
         className="mt-3 p-2 shadow menu menu-compact dropdown-content bg-base-100 rounded-box w-52 border border-base-300"
       >
-        <li>
-          <a className="justify-between">
-            {user?.username}
-            {/* <span className="badge">New</span> */}
-          </a>
+        <li className="menu-title">
+          <span>{user?.username}</span>
         </li>
         <li>
           {rootId ? (
@@ -43,6 +40,9 @@ export default function UserMenu({ onLogout }: UserMenuProps) {
           ) : (
             <span className="text-gray-400">写作</span>
           )}
+        </li>
+        <li>
+          <Link href="/ai-chat">智能问答</Link>
         </li>
         <li>
           <a onClick={onLogout}>登出</a>

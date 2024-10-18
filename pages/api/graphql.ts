@@ -80,6 +80,7 @@ const typeDefs = gql`
     createInitialRoles: Boolean!
     deleteDocumentsAndChildren(id: ID!): Boolean!
     generateKnowledgeGraph(documentId: ID!): KnowledgeGraphResult!
+    aiChat(message: String!): AiChatResponse!
   }
 
   type AuthPayload {
@@ -90,6 +91,33 @@ const typeDefs = gql`
   type KnowledgeGraphResult {
     success: Boolean!
     message: String
+  }
+
+  type AiChatResponse {
+    status: String!
+    data: AiChatData!
+  }
+
+  type AiChatData {
+    session_id: String!
+    message: String!
+    info: AiChatInfo!
+    user: String!
+  }
+  
+
+  type AiChatInfo {
+    sources: [String!]!
+    model: String!
+    chunkdetails: [ChunkDetail!]!
+    total_tokens: Int!
+    response_time: Float!
+    mode: String!
+  }
+
+  type ChunkDetail {
+    id: String!
+    score: Float!
   }
 `;
 
@@ -267,6 +295,41 @@ const neoSchema = new Neo4jGraphQL({
         } catch (error) {
           console.error("生成知识图谱时出错:", error);
           return { success: false, message: "生成知识图谱失败，请稍后重试" };
+        }
+      },
+
+      aiChat: async (_source, { message }, context) => {
+        if (!context.currentUser) {
+          throw new Error("您必须登录才能使用此功能");
+        }
+
+        try {
+          const formData = new FormData();
+          formData.append("uri", process.env.NEO4J_URI || "");
+          formData.append("userName", process.env.NEO4J_USERNAME || "");
+          formData.append("password", process.env.NEO4J_PASSWORD || "");
+          formData.append("database", process.env.NEO4J_DATEBASE || "");
+          formData.append("model", "通义千问");
+          formData.append("mode", "graph+vector");
+          formData.append("question", message);
+          formData.append("session_id", "1c7797f2-2490-4be0-a44d-f27224a6726e");
+          formData.append("document_names", "[]");
+          console.log("AI 聊天请求:", formData);
+
+          const response = await axios.post(
+            "http://localhost:8000/chat_bot",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+          console.log("AI 聊天响应:", response.data);
+          return response.data; // 直接返回整个响应数据
+        } catch (error) {
+          console.error("AI 聊天错误:", error);
+          throw new Error("无法处理您的请求，请稍后再试");
         }
       },
     },

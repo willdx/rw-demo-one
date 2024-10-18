@@ -115,7 +115,11 @@ export default function WritePage() {
 
   const handleSearchResultClick = useCallback(
     (result: SearchResult) => {
-      setSelectedNode(result);
+      setSelectedNode({
+        ...result,
+        isPublished: false, // 或者从result中获取正确的值
+        // 移除 selectedChapter
+      });
     },
     [setSelectedNode]
   );
