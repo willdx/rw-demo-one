@@ -3,53 +3,88 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
-import debounce from "lodash/debounce";
 import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import { useMutation } from "@apollo/client";
 import { UPDATE_DOCUMENT_CONTENT } from "../graphql/queries";
 import { extractFileName } from "../utils/markdownUtils";
 
+// 自定义 hook 用于滑动窗口保存机制
+function useSlideWindowSave(saveFunction: () => void, delay: number = 3000) {
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const scheduleNextSave = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      saveFunction();
+      timerRef.current = null;
+    }, delay);
+  }, [saveFunction, delay]);
+
+  const triggerImmediateSave = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    saveFunction();
+  }, [saveFunction]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  return { scheduleNextSave, triggerImmediateSave };
+}
+
 const VditorEditor: React.FC = () => {
   const editorRef = useRef<Vditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"已保存" | "未保存">("已保存");
 
   const { selectedNode, setSelectedNode } = useDocumentContext();
-  console.log("selectedNode:", selectedNode);
   const selectedNodeRef = useRef(selectedNode);
 
   const [updateDocumentContent] = useMutation(UPDATE_DOCUMENT_CONTENT);
 
-  const debouncedUpdateDocumentContent = useCallback(
-    debounce(async (content, nodeId) => {
-      if (nodeId) {
-        try {
-          await updateDocumentContent({
-            variables: {
-              where: { id: nodeId },
-              update: {
-                content: content,
-                fileName: extractFileName(content),
-              },
+  const saveContent = useCallback(async () => {
+    if (editorRef.current && selectedNodeRef.current) {
+      const content = editorRef.current.getValue();
+      try {
+        await updateDocumentContent({
+          variables: {
+            where: { id: selectedNodeRef.current.id },
+            update: {
+              content: content,
+              fileName: extractFileName(content),
             },
-          });
-          // 更新 DocumentContext 中的 selectedNode, 否则添加新章节树图不会重新渲染
-          setSelectedNode((prevNode) => {
-            if (prevNode) {
-              return {
-                ...prevNode,
-                content: content,
-                fileName: extractFileName(content),
-              };
-            }
-            return prevNode;
-          });
-        } catch (error) {
-          console.error("更新文档时出错:", error);
-        }
+          },
+        });
+        // 更新 DocumentContext 中的 selectedNode
+        setSelectedNode((prevNode) => {
+          if (prevNode) {
+            return {
+              ...prevNode,
+              content: content,
+              fileName: extractFileName(content),
+            };
+          }
+          return prevNode;
+        });
+        console.log("内容已保存");
+        setSaveStatus("已保存");
+      } catch (error) {
+        console.error("保存文档时出错:", error);
+        setSaveStatus("未保存");
       }
-    }, 1000),
-    [updateDocumentContent, setSelectedNode]
-  );
+    }
+  }, [updateDocumentContent, setSelectedNode]);
+
+  const { scheduleNextSave, triggerImmediateSave } = useSlideWindowSave(saveContent);
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -64,27 +99,36 @@ const VditorEditor: React.FC = () => {
           console.log("Vditor 编辑器初始化完成");
           setIsEditorReady(true);
         },
-        input: (value) => {
-          console.log(`编辑器内容变更后数据长度: ${value.length}`);
-          debouncedUpdateDocumentContent(value, selectedNodeRef.current?.id);
+        input: () => {
+          scheduleNextSave();
+          setSaveStatus("未保存");
+        },
+        blur: () => {
+          triggerImmediateSave();
         },
       });
     }
-  }, [debouncedUpdateDocumentContent, selectedNode]);
+  }, [scheduleNextSave, triggerImmediateSave]);
 
   useEffect(() => {
     if (isEditorReady && editorRef.current && selectedNode) {
       const content =
-        selectedNode.selectedChapter?.data?.content ||
-        selectedNode.content ||
-        "";
+        selectedNode.selectedChapter?.content || selectedNode.content || "";
       console.log(`编辑器旧数据长度（未手动更新前）: ${content.length}`);
       editorRef.current.setValue(content);
       selectedNodeRef.current = selectedNode;
+      setSaveStatus("已保存");
     }
   }, [isEditorReady, selectedNode]);
 
-  return <div id="vditor" className="h-full w-full" />;
+  return  (
+    <div className="relative h-full w-full">
+      <div id="vditor" className="h-full w-full" />
+      <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded shadow">
+        {saveStatus}
+      </div>
+    </div>
+  );
 };
 
 export default VditorEditor;
