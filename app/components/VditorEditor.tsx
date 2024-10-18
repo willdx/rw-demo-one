@@ -13,7 +13,7 @@ const VditorEditor: React.FC = () => {
   const editorRef = useRef<Vditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
 
-  const { selectedNode } = useDocumentContext();
+  const { selectedNode, setSelectedNode } = useDocumentContext();
   console.log("selectedNode:", selectedNode);
   const selectedNodeRef = useRef(selectedNode);
 
@@ -32,12 +32,23 @@ const VditorEditor: React.FC = () => {
               },
             },
           });
+          // 更新 DocumentContext 中的 selectedNode, 否则添加新章节树图不会重新渲染
+          setSelectedNode((prevNode) => {
+            if (prevNode) {
+              return {
+                ...prevNode,
+                content: content,
+                fileName: extractFileName(content),
+              };
+            }
+            return prevNode;
+          });
         } catch (error) {
           console.error("更新文档时出错:", error);
         }
       }
     }, 1000),
-    [updateDocumentContent]
+    [updateDocumentContent, setSelectedNode]
   );
 
   useEffect(() => {
@@ -56,7 +67,6 @@ const VditorEditor: React.FC = () => {
         input: (value) => {
           console.log(`编辑器内容变更后数据长度: ${value.length}`);
           debouncedUpdateDocumentContent(value, selectedNodeRef.current?.id);
-          // setSelectedNode(selectedNodeRef.current);
         },
       });
     }
