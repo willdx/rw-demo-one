@@ -180,9 +180,13 @@ export default function WritePage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-forest-bg text-forest-text">
-      <Header />
+      <div className="z-50">
+        {" "}
+        {/* 增加z-index确保Header始终在最上层 */}
+        <Header />
+      </div>
       <div className="flex-grow flex relative">
-        <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar`}>
+        <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar z-10`}>
           <div
             className={`w-full h-full flex flex-col ${
               leftCollapsed ? "invisible" : "visible"
@@ -275,9 +279,10 @@ export default function WritePage() {
           </div>
         </div>
 
+        {/* 切换面板按钮 */}
         <button
           onClick={togglePanel}
-          className="absolute left-0 top-0 mt-2 ml-2 p-2 bg-forest-sidebar hover:bg-forest-border rounded-md transition-colors duration-200"
+          className="absolute left-0 top-1/2 -translate-y-1/2 mt-2 ml-2 p-2 bg-forest-sidebar hover:bg-forest-border rounded-md transition-colors duration-200 z-30"
         >
           {leftCollapsed ? (
             <ChevronRightIcon className="w-5 h-5 text-forest-text" />
@@ -286,7 +291,7 @@ export default function WritePage() {
           )}
         </button>
 
-        <div className="absolute right-0 bottom-0 mb-6 mr-8">
+        <div className="absolute right-4 bottom-4 z-20">
           <div
             className="tooltip"
             data-tip={selectedNode?.isPublished ? "取消发布" : "发布文档"}

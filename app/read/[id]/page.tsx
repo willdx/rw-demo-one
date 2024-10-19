@@ -97,9 +97,14 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-forest-bg text-forest-text">
-      <Header />
+      <div className="z-50">
+        {" "}
+        {/* 增加z-index确保Header始终在最上层 */}
+        <Header />
+      </div>
       <div className="flex-grow flex relative">
-        <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar`}>
+        {/* 左侧面板 */}
+        <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar z-10`}>
           <div
             className={`w-full h-full flex flex-col ${
               leftCollapsed ? "invisible" : "visible"
@@ -138,15 +143,17 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden bg-forest-content">
-          <div className="absolute top-2 right-2 z-10">
+        {/* 主要内容区域 */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-forest-content relative">
+          {/* 背景颜色选择器 */}
+          <div className="absolute top-2 right-2 z-20">
             <div className="dropdown dropdown-end">
               <label tabIndex={0} className="btn btn-ghost btn-circle">
                 <SwatchIcon className="w-5 h-5" />
               </label>
               <ul
                 tabIndex={0}
-                className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                className="dropdown-content z-30 menu p-2 shadow bg-base-100 rounded-box w-52"
               >
                 {[
                   "#F7F7F7",
@@ -169,6 +176,8 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
               </ul>
             </div>
           </div>
+
+          {/* 内容显示区域 */}
           <div
             className="flex-grow overflow-auto p-4 rounded-md shadow-md transition-colors duration-200"
             style={{ backgroundColor: bgColor }}
@@ -185,9 +194,10 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           </div>
         </div>
 
+        {/* 切换面板按钮 */}
         <button
           onClick={togglePanel}
-          className="absolute left-0 top-0 mt-2 ml-2 p-2 bg-forest-sidebar hover:bg-forest-border rounded-md transition-colors duration-200"
+          className="absolute left-0 top-1/2 -translate-y-1/2 mt-2 ml-2 p-2 bg-forest-sidebar hover:bg-forest-border rounded-md transition-colors duration-200 z-30"
         >
           {leftCollapsed ? (
             <ChevronRightIcon className="w-5 h-5 text-forest-text" />
