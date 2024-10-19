@@ -28,7 +28,7 @@ body {
 .vditor-toolbar {
   display: flex;
   align-items: center;
-  height: 64px;
+  height: 3.5rem;
 }
 
 .vditor-toolbar__item {
