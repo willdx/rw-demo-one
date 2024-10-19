@@ -27,7 +27,7 @@ import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
 
 export default function WritePage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { showToast } = useToast();
   const { selectedNode, setSelectedNode } = useDocumentContext();
 
@@ -42,9 +42,11 @@ export default function WritePage() {
     () => ({
       searchTerm: searchQuery,
       first: 10,
+      creatorId: user ? user.id : null,
     }),
     [searchQuery]
   );
+  console.log("#searchVariables:", searchVariables);
 
   const {
     data: searchData,
@@ -115,11 +117,7 @@ export default function WritePage() {
 
   const handleSearchResultClick = useCallback(
     (result: SearchResult) => {
-      setSelectedNode({
-        ...result,
-        isPublished: false, // 或者从result中获取正确的值
-        // 移除 selectedChapter
-      });
+      setSelectedNode(result);
     },
     [setSelectedNode]
   );

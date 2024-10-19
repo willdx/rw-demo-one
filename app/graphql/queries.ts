@@ -1,7 +1,5 @@
 import { gql } from "@apollo/client";
 
-// ... 保留现有的查询
-
 export const GET_DOCUMENT = gql`
   query GetDocument($id: ID!) {
     documents(where: { id: $id }) {
@@ -65,9 +63,14 @@ export const GET_PUBLISHED_DOCUMENTS = gql`
 
 // 搜索文档的查询
 export const SEARCH_DOCUMENTS = gql`
-  query searchDocuments($searchTerm: String!, $first: Int, $after: String) {
+  query searchDocuments(
+    $searchTerm: String!
+    $first: Int
+    $after: String
+    $creatorId: ID
+  ) {
     documentsConnection(
-      where: { isPublished: true, content_CONTAINS: $searchTerm }
+      where: { content_CONTAINS: $searchTerm, creator: { id: $creatorId } }
       sort: [{ updatedAt: DESC }]
       first: $first
       after: $after
@@ -119,7 +122,7 @@ const generateChildrenConnection = (depth: number): string => {
   if (depth <= 0) return "";
 
   return `
-    childrenConnection(sort: $sort) {
+    childrenConnection(where: $childrenWhere, sort: $sort) {
       edges {
         node {
           ...DocumentFields
@@ -148,6 +151,7 @@ export const createGetDocumentsQuery = (maxDepth: number) => gql`
   query Documents(
     $where: DocumentWhere
     $sort: [DocumentChildrenConnectionSort!]
+    $childrenWhere: DocumentChildrenConnectionWhere
   ) {
     documents(where: $where) {
       ...DocumentFields

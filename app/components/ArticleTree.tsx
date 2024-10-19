@@ -95,12 +95,33 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     [queryDepth]
   );
   const { loading, error, data, refetch } = useQuery(GET_DOCUMENTS, {
-    variables: {
-      where: { id: documentId },
-      sort: [
+    variables: useMemo(() => {
+      const baseWhere = { id: documentId };
+      const baseChildrenWhere = {};
+      const baseSort = [
         { node: { fileName: "ASC", updatedAt: "ASC" }, edge: { order: "ASC" } },
-      ],
-    },
+      ];
+
+      if (mode === "write" && user) {
+        return {
+          where: { ...baseWhere, creator: { id: user.id } },
+          childrenWhere: { node: { creator: { id: user.id } } },
+          sort: baseSort,
+        };
+      } else if (mode === "read") {
+        return {
+          where: { ...baseWhere, isPublished: true },
+          childrenWhere: { node: { isPublished: true } },
+          sort: baseSort,
+        };
+      }
+
+      return {
+        where: baseWhere,
+        childrenWhere: baseChildrenWhere,
+        sort: baseSort,
+      };
+    }, [documentId, mode, user]),
     skip: !documentId,
   });
 
@@ -396,7 +417,8 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   }, [contextMenu, handleAddNode, nodes, edges, closeContextMenu]);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isGenerateGraphDialogOpen, setIsGenerateGraphDialogOpen] = useState(false);
+  const [isGenerateGraphDialogOpen, setIsGenerateGraphDialogOpen] =
+    useState(false);
 
   const [generateKnowledgeGraph, { loading: generatingGraph }] = useMutation(
     GENERATE_KNOWLEDGE_GRAPH,
@@ -526,10 +548,12 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
               <a onClick={handleAddChildNode}>添加子节点</a>
               <a onClick={handleAddSiblingNode}>添加同级节点</a>
               <a onClick={handleDeleteNodeFromMenu}>删除节点</a>
-              <a 
+              <a
                 onClick={openGenerateGraphDialog}
-                className={`${generatingGraph ? 'opacity-50 cursor-not-allowed' : ''}`}
-                data-tip={generatingGraph ? '正在生成知识图谱' : '生成知识图谱'}
+                className={`${
+                  generatingGraph ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                data-tip={generatingGraph ? "正在生成知识图谱" : "生成知识图谱"}
               >
                 生成知识图谱
               </a>
