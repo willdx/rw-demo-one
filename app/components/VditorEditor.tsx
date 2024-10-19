@@ -7,6 +7,7 @@ import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import { useMutation } from "@apollo/client";
 import { UPDATE_DOCUMENT_CONTENT } from "../graphql/queries";
 import { extractFileName } from "../utils/markdownUtils";
+import { useToast } from "../contexts/ToastContext";
 
 // 自定义 hook 用于滑动窗口保存机制
 function useSlideWindowSave(saveFunction: () => void, delay: number = 10000) {
@@ -42,6 +43,7 @@ function useSlideWindowSave(saveFunction: () => void, delay: number = 10000) {
 }
 
 const VditorEditor: React.FC = () => {
+  const { showToast } = useToast();
   const editorRef = useRef<Vditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"已保存" | "未保存">("已保存");
@@ -83,6 +85,7 @@ const VditorEditor: React.FC = () => {
         setSaveStatus("已保存");
         contentModifiedRef.current = false;
       } catch (error) {
+        showToast("保存文档时出错", "error");
         console.error("保存文档时出错:", error);
         setSaveStatus("未保存");
       }

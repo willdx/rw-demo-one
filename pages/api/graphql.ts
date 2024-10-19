@@ -67,8 +67,25 @@ const typeDefs = gql`
     creator: User! @relationship(type: "CREATED", direction: IN)
   }
 
+  type JWT @jwt {
+    sub: ID!
+    rootId: ID!
+    roles: [String!]!
+  }
+
   extend type Document
-    @authentication(operations: [CREATE, READ, UPDATE, DELETE])
+    @authentication(operations: [CREATE, UPDATE, DELETE])
+    @authorization(
+      filter: [
+        {
+          operations: [READ, AGGREGATE]
+          requireAuthentication: false
+          where: { node: { isPublished: true } }
+        }
+        { where: { node: { id: "$jwt.sub" } } }
+        { where: { jwt: { roles_INCLUDES: "admin" } } }
+      ]
+    )
 
   type ChildOrder @relationshipProperties {
     order: Float
@@ -104,7 +121,6 @@ const typeDefs = gql`
     info: AiChatInfo!
     user: String!
   }
-  
 
   type AiChatInfo {
     sources: [String!]!
@@ -174,19 +190,47 @@ const neoSchema = new Neo4jGraphQL({
           ],
         });
 
-        const token = jwt.sign({ sub: users[0].id }, process.env.JWT_SECRET!, {
-          expiresIn: "1d",
+        const newUser = users[0];
+
+        // 创建用户根文档
+        const { documents } = await Document.create({
+          input: [
+            {
+              fileName: newUser.username || "me",
+              content: `# 欢迎使用我们的系统！\n\n 
+              请在这里开始你的知识记录吧！\n\n 你可以使用 Markdown 语法来记录你的知识。\n\n
+              你可以点击左侧的节点右键弹出右键菜单来控制子节点`,
+              isPublished: false,
+              creator: {
+                connect: { where: { node: { id: newUser.id } } },
+              },
+            },
+          ],
         });
+
+        const rootDocument = documents[0];
+
+        const token = generateJwtToken(newUser, rootDocument.id);
 
         return {
           token,
-          user: users[0],
+          user: newUser,
         };
       },
 
       signIn: async (_source, { email, password }) => {
         const [user] = await User.find({
           where: { email },
+          selectionSet: `{
+            id
+            username
+            email
+            password
+            roles {
+              id
+              name
+            }
+          }`,
         });
 
         if (!user) {
@@ -207,13 +251,7 @@ const neoSchema = new Neo4jGraphQL({
 
         const rootId = rootDocument?.id || null;
 
-        const token = jwt.sign(
-          { sub: user.id, rootId: rootId },
-          process.env.JWT_SECRET!,
-          {
-            expiresIn: "1d",
-          }
-        );
+        const token = generateJwtToken(user, rootId);
 
         return {
           token,
@@ -257,7 +295,7 @@ const neoSchema = new Neo4jGraphQL({
         }
       },
 
-      generateKnowledgeGraph: async (_, { documentId }, context) => {
+      generateKnowledgeGraph: async (_, { documentId }) => {
         try {
           const documents = await Document.find({
             where: { id: documentId },
@@ -372,7 +410,9 @@ export default startServerAndCreateNextHandler(await createApolloServer(), {
         console.error("无效或过期的令牌", err);
       }
     }
-
+    console.log("当前用户:", currentUser);
+    console.log("token:", token);
+    console.log("jwt:", decodedToken);
     return {
       req,
       res,
@@ -383,3 +423,16 @@ export default startServerAndCreateNextHandler(await createApolloServer(), {
     };
   },
 });
+function generateJwtToken(user: any, rootId: any) {
+  return jwt.sign(
+    {
+      sub: user.id,
+      rootId: rootId,
+      roles: user.roles.map((role) => role.name),
+    },
+    process.env.JWT_SECRET!,
+    {
+      expiresIn: "30d",
+    }
+  );
+}
