@@ -29,7 +29,7 @@ export default function Sidebar() {
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
   return (
-    <div className={`fixed left-0 top-0 h-full bg-base-200 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} border-r border-base-300`}>
+    <div className={`fixed left-0 top-0 h-full bg-base-200 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
       <button 
         className="absolute -right-3 top-4 bg-base-200 p-1 rounded-full"
         onClick={toggleSidebar}
