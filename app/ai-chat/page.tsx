@@ -42,10 +42,18 @@ export default function AiChatPage() {
 
   if (!user) {
     return (
-      <>
+      <div className="min-h-screen flex flex-col bg-forest-bg text-forest-text">
         <Header />
-        <div className="container mx-auto p-4">请登录后使用AI聊天功能。</div>
-      </>
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center p-8 bg-forest-sidebar rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">需要登录</h2>
+            <p className="mb-6">请登录后使用AI聊天功能。</p>
+            <a href="/login" className="btn btn-primary">
+              前往登录
+            </a>
+          </div>
+        </div>
+      </div>
     );
   }
 
