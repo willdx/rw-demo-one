@@ -82,7 +82,7 @@ const typeDefs = gql`
           requireAuthentication: false
           where: { node: { isPublished: true } }
         }
-        { where: { node: { id: "$jwt.sub" } } }
+        { where: { node: { creator: { id: "$jwt.sub" } } } }
         { where: { jwt: { roles_INCLUDES: "admin" } } }
       ]
     )
