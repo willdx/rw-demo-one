@@ -55,7 +55,7 @@ export const formatGraphData = (
           layout,
         },
         position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
-        style: { width: NODE_WIDTH },
+        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       },
     });
 
