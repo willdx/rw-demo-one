@@ -16,21 +16,15 @@ import {
 import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
 import ChapterTree from "@/app/components/ChapterTree";
-import { useAuth } from "../../contexts/AuthContext";
 import Sidebar from "../../components/Sidebar";
 import LoginPrompt from "@/app/components/LoginPrompt";
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const router = useRouter();
-  const { user } = useAuth();
-  const { selectedNode, setSelectedNode } = useDocumentContext();
-  const [selectedContent, setSelectedContent] = useState<string>("");
-  const [markdownTreeContent, setMarkdownTreeContent] = useState<string>("");
-  const [selectedMarkdownContent, setSelectedMarkdownContent] = useState<string>("");
+  const { selectedNode } = useDocumentContext();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"article" | "chapter">("article");
   const [bgColor, setBgColor] = useState("#CEECCF");
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -47,61 +41,27 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
     border-r border-forest-border relative overflow-hidden
   `;
 
-  const handleNodeTreeSelect = useCallback((content: string) => {
-    setSelectedContent(content);
-    setMarkdownTreeContent(content);
-    // 当选中节点树中的节点时，重置 Markdown 树的选中内容
-    setSelectedMarkdownContent("");
+  const handleTabClick = useCallback((tab: "article" | "chapter") => {
+    setActiveTab(tab);
   }, []);
-
-  const handleMarkdownTreeSelect = useCallback((content: string) => {
-    setSelectedMarkdownContent(content);
-  }, []);
-
-  const handleNodeSelect = useCallback((nodeId: string) => {
-    setSelectedNodeId(nodeId);
-  }, []);
-
-  const handleTabClick = useCallback(
-    (tab: "article" | "chapter") => {
-      setActiveTab(tab);
-      if (tab === "chapter" && !selectedMarkdownContent) {
-        setSelectedMarkdownContent(selectedContent);
-      }
-    },
-    [selectedContent, selectedMarkdownContent]
-  );
-
-  useEffect(() => {
-    if (activeTab === "article") {
-      setSelectedMarkdownContent("");
-    }
-  }, [activeTab]);
-
-  const displayContent =
-    activeTab === "article" ? selectedNode?.content : selectedContent;
 
   const handleBgColorChange = (color: string) => {
     setBgColor(color);
   };
 
-  // read页面是用来访问公开的数据，所以不需要判断是否登录
-  // if (!user) {
-  //   return (
-  //     <div className="min-h-screen flex flex-row bg-forest-bg text-forest-text">
-  //       <Sidebar />
-  //       <LoginPrompt title="需要登录" message="请登录后阅读共享文档。" />
-  //     </div>
-  //   );
-  // }
-
   useEffect(() => {
     const handleSidebarToggle = (e: CustomEvent) => {
       setSidebarCollapsed(e.detail.collapsed);
     };
-    window.addEventListener("sidebarToggle", handleSidebarToggle as EventListener);
+    window.addEventListener(
+      "sidebarToggle",
+      handleSidebarToggle as EventListener
+    );
     return () => {
-      window.removeEventListener("sidebarToggle", handleSidebarToggle as EventListener);
+      window.removeEventListener(
+        "sidebarToggle",
+        handleSidebarToggle as EventListener
+      );
     };
   }, []);
 
@@ -148,16 +108,8 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
               </div>
               <div className="flex-grow overflow-hidden p-2">
                 <ReactFlowProvider>
-                  {activeTab === "article" && (
-                    <ArticleTree
-                      mode="read"
-                      onSelect={handleNodeTreeSelect}
-                      onNodeSelect={handleNodeSelect}
-                    />
-                  )}
-                  {activeTab === "chapter" && (
-                    <ChapterTree onSelect={handleMarkdownTreeSelect} />
-                  )}
+                  {activeTab === "article" && <ArticleTree mode="read" />}
+                  {activeTab === "chapter" && <ChapterTree />}
                 </ReactFlowProvider>
               </div>
             </div>
