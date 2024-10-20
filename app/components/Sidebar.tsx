@@ -95,7 +95,7 @@ const Sidebar: React.FC = () => {
                   <Link
                     href={item.href}
                     className={`flex items-center p-4 hover:bg-forest-hover ${
-                      collapsed ? "justify-center" : ""
+                      collapsed ? "justify-center" : "justify-left"
                     }`}
                   >
                     <item.icon className="w-6 h-6" />
@@ -111,7 +111,7 @@ const Sidebar: React.FC = () => {
             <div className="flex flex-col items-center justify-center">
               <div
                 className={`flex items-center w-full h-full p-4 hover:bg-forest-hover ${
-                  collapsed ? "flex-col" : "justify-center"
+                  collapsed ? "flex-col" : "justify-left"
                 }`}
                 onClick={handleLogout}
               >
@@ -127,7 +127,7 @@ const Sidebar: React.FC = () => {
             <div className="flex flex-col items-center justify-center">
               <div
                 className={`flex items-center w-full h-full p-4 hover:bg-forest-hover ${
-                  collapsed ? "flex-col" : "justify-center"
+                  collapsed ? "flex-col" : "justify-left"
                 }`}
                 onClick={() => setIsLoginModalOpen(true)}
               >
@@ -141,7 +141,7 @@ const Sidebar: React.FC = () => {
 
               <div
                 className={`flex items-center w-full h-full p-4 hover:bg-forest-hover ${
-                  collapsed ? "flex-col" : "justify-center"
+                  collapsed ? "flex-col" : "justify-left"
                 }`}
                 onClick={() => setIsRegisterModalOpen(true)}
               >
