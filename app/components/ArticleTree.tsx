@@ -21,9 +21,7 @@ import {
   Position,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ViewColumnsIcon } from "@heroicons/react/24/outline";
 import dagre from "dagre";
-import { debounce } from "lodash";
 import CustomNode from "./CustomNode";
 import ContextMenu from "./ContextMenu";
 import {
@@ -49,6 +47,7 @@ import { useAuth } from "../contexts/AuthContext";
 import TreeSkeleton from "./TreeSkeleton";
 import { nodeTypes } from "../utils/constant";
 import ConfirmDialog from "./ConfirmDialog";
+import { ListBulletIcon } from "@heroicons/react/24/outline";
 
 interface DocumentTreeProps {
   mode: "read" | "write";
@@ -71,7 +70,6 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView, getIntersectingNodes } = useReactFlow();
-  const [layout, setLayout] = useState<"LR" | "TB">("LR");
   const [queryDepth, setQueryDepth] = useState(3);
   const [draggedNode, setDraggedNode] = useState<Node | null>(null);
   const [possibleTargets, setPossibleTargets] = useState<string[]>([]);
@@ -130,7 +128,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   useEffect(() => {
     if (data?.documents?.length) {
-      const { nodes, edges } = formatGraphData(data.documents[0], layout);
+      const { nodes, edges } = formatGraphData(data.documents[0], "LR");
       setNodes(nodes);
       setEdges(edges);
       if (isFirstRender.current) {
@@ -138,7 +136,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         isFirstRender.current = false;
       }
     }
-  }, [data, layout, setNodes, setEdges]);
+  }, [data, setNodes, setEdges, setSelectedNode]);
 
   const [dfsOrder, setDfsOrder] = useState<string[]>([]);
   const [currentDfsIndex, setCurrentDfsIndex] = useState<number>(0);
@@ -189,47 +187,36 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     [dfsOrder, nodes, setSelectedNode, setEdges]
   );
 
-  const updateLayout = useCallback(
-    (direction: "LR" | "TB") => {
-      const { nodes: layoutedNodes, edges: layoutedEdges } =
-        getLayoutedElements(nodesRef.current, edgesRef.current, direction);
-      const updatedNodes = layoutedNodes.map((node) => ({
-        ...node,
-        data: { ...node.data, layout: direction },
-        sourcePosition: direction === "LR" ? Position.Right : Position.Bottom,
-        targetPosition: direction === "LR" ? Position.Left : Position.Top,
-      }));
-      setNodes(updatedNodes);
+  const updateLayout = useCallback(() => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      nodesRef.current,
+      edgesRef.current,
+      "LR"
+    );
+    const updatedNodes = layoutedNodes.map((node) => ({
+      ...node,
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+    }));
+    setNodes(updatedNodes);
 
-      const updatedEdges = layoutedEdges.map((edge) => ({
-        ...edge,
-        type: "smoothstep",
-        animated: true,
-      }));
-      setEdges(updatedEdges);
+    const updatedEdges = layoutedEdges.map((edge) => ({
+      ...edge,
+      type: "smoothstep",
+      animated: true,
+    }));
+    setEdges(updatedEdges);
 
-      setTimeout(() => fitView(), 0);
+    setTimeout(() => fitView(), 0);
+  }, [setNodes, setEdges, fitView]);
+
+  const handleDepthChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const newDepth = parseInt(event.target.value, 10);
+      setQueryDepth(newDepth);
     },
-    [setNodes, setEdges, fitView]
+    []
   );
-
-  const onToggleLayout = useCallback(
-    debounce(() => {
-      setLayout((prevLayout) => {
-        const newLayout =
-          prevLayout === "horizontal" ? "vertical" : "horizontal";
-        updateLayout(newLayout === "horizontal" ? "LR" : "TB");
-        return newLayout;
-      });
-    }, 300),
-    [updateLayout]
-  );
-
-  // 默认请求深度
-  const handleDepthChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newDepth = parseInt(event.target.value, 10);
-    setQueryDepth(newDepth);
-  };
 
   // 更新 onNodeDragStart 处理函数
   const onNodeDragStart = useCallback(
@@ -494,19 +481,6 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   return (
     <div className="h-full relative">
-      <div className="absolute top-0 left-0 z-10 m-2">
-        <select
-          value={queryDepth}
-          onChange={handleDepthChange}
-          className="select select-bordered select-sm w-full max-w-xs"
-        >
-          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((depth) => (
-            <option key={depth} value={depth}>
-              深度: {depth}
-            </option>
-          ))}
-        </select>
-      </div>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -515,7 +489,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
-        fitView
+        fitView={true}
         onNodeDragStart={mode === "write" ? onNodeDragStart : () => {}}
         onNodeDrag={mode === "write" ? onNodeDrag : () => {}}
         onNodeDragStop={mode === "write" ? onNodeDragStop : () => {}}
@@ -523,12 +497,21 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         onClick={closeContextMenu}
       >
         <Controls>
-          <ControlButton onClick={onToggleLayout} title="切换布局">
-            <ViewColumnsIcon
-              className={`w-4 h-4 ${
-                layout === "TB" ? "transform rotate-90" : ""
-              }`}
-            />
+          <ControlButton className="react-flow__controls-depth" title="树深">
+            <div className="flex items-center">
+              <ListBulletIcon className="w-4 h-4 mr-1" />
+              <select
+                value={queryDepth}
+                onChange={handleDepthChange}
+                className="bg-transparent border-none text-xs"
+              >
+                {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((depth) => (
+                  <option key={depth} value={depth}>
+                    {depth}
+                  </option>
+                ))}
+              </select>
+            </div>
           </ControlButton>
         </Controls>
         <Background

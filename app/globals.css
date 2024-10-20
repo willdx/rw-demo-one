@@ -41,3 +41,64 @@ body {
     text-wrap: balance;
   }
 }
+
+.react-flow__controls-depth {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+}
+
+.react-flow__controls-depth svg {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  color: currentColor; /* 确保图标颜色与文本颜色一致 */
+}
+
+.react-flow__controls-depth select {
+  appearance: none;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: auto;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  line-height: inherit;
+  outline: none;
+}
+
+.react-flow__controls-depth select::-ms-expand {
+  display: none;
+}
+
+.react-flow__controls-depth:hover {
+  background-color: #f0f0f0;
+}
+
+.react-flow__controls-depth::after {
+  content: "调整请求树的深度";
+  position: absolute;
+  /* bottom: -40px; */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 2px 4px;
+  margin-left: 80px;
+  width: 100px;
+  border-radius: 4px;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.react-flow__controls-depth:hover::after {
+  opacity: 1;
+}
+
+/* 隐藏 React Flow 水印 */
+.react-flow__attribution {
+  display: none !important;
+}
