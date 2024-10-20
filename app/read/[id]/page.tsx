@@ -2,9 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
-import DocumentTree from "../../components/ArticleTree";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import {
   ChevronLeftIcon,
@@ -17,7 +15,6 @@ import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
 import ChapterTree from "@/app/components/ChapterTree";
 import Sidebar from "../../components/Sidebar";
-import LoginPrompt from "@/app/components/LoginPrompt";
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const router = useRouter();

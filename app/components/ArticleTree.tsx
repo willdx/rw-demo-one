@@ -38,6 +38,7 @@ import {
   CHANGE_DOCUMENT_PARENT,
   CREATE_SUB_DOCUMENT,
   DELETE_DOCUMENTS_AND_CHILDREN,
+  UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED,
 } from "../graphql/mutations";
 import { useDocumentContext } from "../contexts/DocumentContext";
 import { useParams, useRouter } from "next/navigation";
@@ -80,6 +81,9 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const [createSubDocument] = useMutation(CREATE_SUB_DOCUMENT);
   const [deleteDocumentsAndChildren] = useMutation(
     DELETE_DOCUMENTS_AND_CHILDREN
+  );
+  const [updateDocumentIsPublished] = useMutation(
+    UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
   );
 
   const nodesRef = useRef(nodes);
@@ -455,6 +459,25 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     }
   }, [selectedNode, generateKnowledgeGraph]);
 
+  const handlePublishToggle = useCallback(
+    async (nodeId: string, currentPublishState: boolean) => {
+      try {
+        await updateDocumentIsPublished({
+          variables: {
+            id: nodeId,
+            isPublished: !currentPublishState,
+          },
+        });
+        showToast("发布状态更新成功", "success");
+        refetch();
+      } catch (error) {
+        console.error("更新发布状态失败:", error);
+        showToast("更新发布状态失败，请重试", "error");
+      }
+    },
+    [updateDocumentIsPublished, showToast, refetch]
+  );
+
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
     document.addEventListener("click", handleClickOutside);
@@ -546,6 +569,19 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
                 data-tip={generatingGraph ? "正在生成知识图谱" : "生成知识图谱"}
               >
                 生成知识图谱
+              </a>
+              <a
+                onClick={() => {
+                  if (selectedNode?.isPublished) {
+                    handlePublishToggle(
+                      selectedNode?.id,
+                      !selectedNode?.isPublished
+                    );
+                  }
+                  closeContextMenu();
+                }}
+              >
+                {selectedNode?.isPublished ? "取消发布" : "发布文档"}
               </a>
             </>
           )}

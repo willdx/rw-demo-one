@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import { SEARCH_DOCUMENTS } from "../../graphql/queries";
-import { UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED } from "../../graphql/mutations";
 import ChapterTree from "../../components/ChapterTree";
 import VditorEditor from "../../components/VditorEditor";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -13,15 +12,12 @@ import {
   ChevronRightIcon,
   BookOpenIcon,
   DocumentTextIcon,
-  ArrowUpCircleIcon,
-  ArrowDownCircleIcon,
   MagnifyingGlassIcon,
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import { highlightSearchResult } from "../../utils/markdownUtils";
 import SearchResults, { SearchResult } from "../../components/SearchResults";
 import { useInView } from "react-intersection-observer";
-import { useToast } from "../../contexts/ToastContext";
 import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
 import Sidebar from "../../components/Sidebar";
@@ -29,9 +25,8 @@ import LoginPrompt from "@/app/components/LoginPrompt";
 import { useRouter } from "next/navigation";
 
 export default function WritePage({ params }: { params: { id: string } }) {
-  const { token, user, rootId } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
-  const { showToast } = useToast();
   const { selectedNode, setSelectedNode } = useDocumentContext();
 
   // 搜索功能状态
@@ -132,33 +127,6 @@ export default function WritePage({ params }: { params: { id: string } }) {
     [setSelectedNode]
   );
 
-  const [updateDocumentIsPublished] = useMutation(
-    UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
-  );
-
-  const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
-
-  const panelClass = (collapsed: boolean) => `
-    transition-all duration-300 ease-in-out
-    ${collapsed ? "w-0" : "w-2/5"}
-    border-r border-forest-border relative overflow-hidden
-  `;
-
-  const updateDocumentIsPublishedWrapper = async () => {
-    try {
-      await updateDocumentIsPublished({
-        variables: {
-          id: selectedNode?.id,
-          isPublished: selectedNode?.isPublished ? false : true,
-        },
-      });
-      showToast("操作成功", "success");
-    } catch (error) {
-      console.error("操作失败:", error);
-      showToast("操作失败，请重试。", "error");
-    }
-  };
-
   const { ref, inView } = useInView({
     threshold: 0,
     rootMargin: "100px",
@@ -185,6 +153,17 @@ export default function WritePage({ params }: { params: { id: string } }) {
       );
     };
   }, []);
+
+  const panelClass = useCallback(
+    (collapsed: boolean) => `
+    transition-all duration-300 ease-in-out
+    ${collapsed ? "w-0" : "w-2/5"}
+    border-r border-forest-border relative overflow-hidden
+  `,
+    []
+  );
+
+  const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 
   if (!user) {
     return (
@@ -296,7 +275,6 @@ export default function WritePage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* 移动折叠按钮到中间位置 */}
           <button
             onClick={togglePanel}
             className="absolute left-0 top-1/2 -translate-y-1/2 p-2 bg-forest-sidebar hover:bg-forest-hover rounded-r-md transition-colors duration-200 z-30"
@@ -307,26 +285,6 @@ export default function WritePage({ params }: { params: { id: string } }) {
               <ChevronLeftIcon className="w-5 h-5 text-forest-text" />
             )}
           </button>
-
-          <div className="absolute right-4 bottom-4 z-20">
-            <div
-              className="tooltip"
-              data-tip={selectedNode?.isPublished ? "取消发布" : "发布文档"}
-            >
-              <div
-                className="cursor-pointer"
-                onClick={() => {
-                  updateDocumentIsPublishedWrapper();
-                }}
-              >
-                {selectedNode?.isPublished ? (
-                  <ArrowDownCircleIcon className="h-8 w-8 text-secondary" />
-                ) : (
-                  <ArrowUpCircleIcon className="h-8 w-8 text-primary" />
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

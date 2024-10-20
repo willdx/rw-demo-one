@@ -8,6 +8,7 @@ import { useMutation } from "@apollo/client";
 import { UPDATE_DOCUMENT_CONTENT } from "../graphql/queries";
 import { extractFileName } from "../utils/markdownUtils";
 import { useToast } from "../contexts/ToastContext";
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 // 自定义 hook 用于滑动窗口保存机制
 function useSlideWindowSave(saveFunction: () => void, delay: number = 10000) {
@@ -93,7 +94,6 @@ const VditorEditor: React.FC = () => {
           }
           return prevNode;
         });
-        console.log("内容已保存");
         setSaveStatus("已保存");
         contentModifiedRef.current = false;
       } catch (error) {
@@ -151,8 +151,43 @@ const VditorEditor: React.FC = () => {
   return (
     <div className="relative h-full w-full">
       <div id="vditor" className="h-full w-full" />
-      <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded shadow">
-        {saveStatus}
+      <div className="absolute bottom-4 right-4 flex flex-col items-end space-y-2">
+        <div className="flex items-center px-3 py-1 rounded-full bg-green-100 text-green-600">
+          {saveStatus === "已保存" ? (
+            <CheckCircleIcon className="w-5 h-5" />
+          ) : (
+            <XCircleIcon className="w-5 h-5" />
+          )}
+          <span
+            className={`ml-2 text-sm font-medium 
+                ${
+                  saveStatus === "已保存" ? "text-green-600" : "text-yellow-600"
+                } 
+                `}
+          >
+            {saveStatus}
+          </span>
+        </div>
+        {selectedNode && (
+          <div className="flex items-center px-3 py-1 rounded-full bg-green-100 text-green-600">
+            {selectedNode.isPublished ? (
+              <CheckCircleIcon className="w-5 h-5" />
+            ) : (
+              <XCircleIcon className="w-5 h-5" />
+            )}
+            <span
+              className={`ml-2 text-sm font-medium 
+                ${
+                  selectedNode.isPublished
+                    ? "text-green-600"
+                    : "text-yellow-600"
+                } 
+                `}
+            >
+              {selectedNode.isPublished ? "已发布" : "未发布"}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
