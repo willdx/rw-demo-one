@@ -79,7 +79,7 @@ const VditorEditor: React.FC = () => {
             where: { id: selectedNodeRef.current.id },
             update: {
               content: modifiedAritcleContent,
-              fileName: extractFileName(content),
+              fileName: extractFileName(modifiedAritcleContent),
             },
           },
         });
