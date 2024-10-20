@@ -118,7 +118,7 @@ const ChapterTree: React.FC = () => {
         ...node,
         data: {
           ...node.data,
-          isSelected: node.id === selectedNode?.id,
+          isSelected: node.id === selectedNode?.selectedChapter?.id,
           layout: layout,
         },
       }));
@@ -184,17 +184,23 @@ const ChapterTree: React.FC = () => {
   }, [handleKeyDown]);
 
   const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: MarkdownNode) => {
+    (event: React.MouseEvent, node: Node) => {
       console.log("节点被点击:", node);
       if (node && selectedNode) {
         setSelectedNode({
           ...selectedNode,
           selectedChapter: node,
         });
+        setNodes((nds) =>
+          nds.map((n) => ({
+            ...n,
+            data: { ...n.data, isSelected: n.id === node.id },
+          }))
+        );
         setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
       }
     },
-    [selectedNode, setSelectedNode, dfsOrder]
+    [selectedNode, setSelectedNode, setNodes, nodes, setEdges]
   );
 
   return (

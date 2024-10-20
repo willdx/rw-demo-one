@@ -132,15 +132,20 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   useEffect(() => {
     if (data?.documents?.length) {
-      const { nodes, edges } = formatGraphData(data.documents[0], "LR");
-      setNodes(nodes);
+      const { nodes: initialNodes, edges } = formatGraphData(data.documents[0], "LR");
+      setNodes(
+        initialNodes.map((n) => ({
+          ...n,
+          data: { ...n.data, isSelected: n.id === selectedNode?.id },
+        }))
+      );
       setEdges(edges);
       if (isFirstRender.current) {
-        setSelectedNode(nodes[0]);
+        setSelectedNode(initialNodes[0] as DocumentNode);
         isFirstRender.current = false;
       }
     }
-  }, [data, setNodes, setEdges, setSelectedNode]);
+  }, [data, setNodes, setEdges, setSelectedNode, selectedNode]);
 
   const [dfsOrder, setDfsOrder] = useState<string[]>([]);
   const [currentDfsIndex, setCurrentDfsIndex] = useState<number>(0);
@@ -161,9 +166,15 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     (event: React.MouseEvent, node: Node) => {
       console.log("handleNodeClick node:", node);
       setSelectedNode(node as DocumentNode);
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, isSelected: n.id === node.id },
+        }))
+      );
       setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
     },
-    [setSelectedNode, nodes, setEdges]
+    [setSelectedNode, nodes, setEdges, setNodes]
   );
 
   const handleKeyDown = useCallback(
