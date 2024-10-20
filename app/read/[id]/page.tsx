@@ -26,12 +26,12 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   const { selectedNode, setSelectedNode } = useDocumentContext();
   const [selectedContent, setSelectedContent] = useState<string>("");
   const [markdownTreeContent, setMarkdownTreeContent] = useState<string>("");
-  const [selectedMarkdownContent, setSelectedMarkdownContent] =
-    useState<string>("");
+  const [selectedMarkdownContent, setSelectedMarkdownContent] = useState<string>("");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"article" | "chapter">("article");
   const [bgColor, setBgColor] = useState("#CEECCF");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (params.id === "null" || !params.id) {
@@ -50,7 +50,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   const handleNodeTreeSelect = useCallback((content: string) => {
     setSelectedContent(content);
     setMarkdownTreeContent(content);
-    // 当选��节点树中的节点时，重置 Markdown 树的选中内容
+    // 当选中节点树中的节点时，重置 Markdown 树的选中内容
     setSelectedMarkdownContent("");
   }, []);
 
@@ -95,12 +95,23 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   //   );
   // }
 
+  useEffect(() => {
+    const handleSidebarToggle = (e: CustomEvent) => {
+      setSidebarCollapsed(e.detail.collapsed);
+    };
+    window.addEventListener("sidebarToggle", handleSidebarToggle as EventListener);
+    return () => {
+      window.removeEventListener("sidebarToggle", handleSidebarToggle as EventListener);
+    };
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <div
-        className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
-        style={{ marginLeft: leftCollapsed ? "4rem" : "16rem" }}
+        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
+          sidebarCollapsed ? "ml-16" : "ml-64"
+        }`}
       >
         <div className="flex-1 flex overflow-hidden">
           <div
@@ -203,7 +214,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
 
           <button
             onClick={togglePanel}
-            className="absolute left-0 top-1/2 -translate-y-1/2 mt-2 ml-2 p-2 bg-forest-sidebar hover:bg-forest-border rounded-md transition-colors duration-200 z-30"
+            className="absolute left-0 top-1/2 -translate-y-1/2 mt-2 ml-2 p-2 bg-forest-sidebar hover:bg-forest-hover rounded-r-md transition-colors duration-200 z-30"
           >
             {leftCollapsed ? (
               <ChevronRightIcon className="w-5 h-5 text-forest-text" />
