@@ -83,24 +83,24 @@ export const findNodeById = (
   return null;
 };
 
-export const replaceNodeContent = (
-  fullContent: string,
-  parsedNodes: MarkdownNode[],
-  nodeId: string,
-  newContent: string
-): string => {
-  const node = findNodeById(parsedNodes, nodeId);
-  console.log("####fullContent:", fullContent);
-  console.log("####oldContent:", node?.content);
-  console.log("####newContent:", newContent);
-  if (!node) {
-    console.error(`Node with id ${nodeId} not found`);
-    return fullContent;
-  }
+// export const replaceNodeContent = (
+//   fullContent: string,
+//   parsedNodes: MarkdownNode[],
+//   nodeId: string,
+//   newContent: string
+// ): string => {
+//   const node = findNodeById(parsedNodes, nodeId);
+//   console.log("####fullContent:", fullContent);
+//   console.log("####oldContent:", node?.content);
+//   console.log("####newContent:", newContent);
+//   if (!node) {
+//     console.error(`Node with id ${nodeId} not found`);
+//     return fullContent;
+//   }
 
-  // 使用字符串替换，确保只替换一次
-  return fullContent.replace(node?.content, newContent);
-};
+//   // 使用字符串替换，确保只替换一次
+//   return fullContent.replace(node?.content, newContent);
+// };
 
 // 辅助函数：提取文件名（第一个一级标题）
 export const extractFileName = (content: string): string => {

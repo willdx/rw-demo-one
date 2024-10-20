@@ -61,12 +61,24 @@ const VditorEditor: React.FC = () => {
       contentModifiedRef.current
     ) {
       const content = editorRef.current.getValue();
+      let modifiedAritcleContent = editorRef.current.getValue();
       try {
+        const selectedChapter = selectedNodeRef.current.selectedChapter;
+        if (selectedChapter) {
+          console.log("更新章节内容:", selectedChapter?.data?.content);
+          const articleContent = selectedNodeRef.current.content;
+          const chapterContentFrom = selectedChapter?.data?.content;
+          const chapterContentTo = content;
+          modifiedAritcleContent = articleContent.replace(
+            chapterContentFrom,
+            chapterContentTo
+          );
+        }
         await updateDocumentContent({
           variables: {
             where: { id: selectedNodeRef.current.id },
             update: {
-              content: content,
+              content: modifiedAritcleContent,
               fileName: extractFileName(content),
             },
           },
@@ -75,8 +87,8 @@ const VditorEditor: React.FC = () => {
           if (prevNode) {
             return {
               ...prevNode,
-              content: content,
-              fileName: extractFileName(content),
+              content: modifiedAritcleContent,
+              fileName: extractFileName(modifiedAritcleContent),
             };
           }
           return prevNode;
