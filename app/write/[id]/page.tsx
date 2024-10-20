@@ -26,8 +26,11 @@ import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
 import Sidebar from "../../components/Sidebar";
 import LoginPrompt from "@/app/components/LoginPrompt";
-export default function WritePage() {
+import { useRouter } from "next/navigation";
+
+export default function WritePage({ params }: { params: { id: string } }) {
   const { token, user, rootId } = useAuth();
+  const router = useRouter();
   const { showToast } = useToast();
   const { selectedNode, setSelectedNode } = useDocumentContext();
 
@@ -39,6 +42,12 @@ export default function WritePage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (params.id === "null" || !params.id) {
+      router.push("/404");
+    }
+  }, [params.id, router]);
 
   const searchVariables = useMemo(
     () => ({

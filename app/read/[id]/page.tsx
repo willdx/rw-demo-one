@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ReactFlowProvider } from "@xyflow/react";
 import DocumentTree from "../../components/ArticleTree";
@@ -20,6 +21,7 @@ import Sidebar from "../../components/Sidebar";
 import LoginPrompt from "@/app/components/LoginPrompt";
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
+  const router = useRouter();
   const { user } = useAuth();
   const { selectedNode, setSelectedNode } = useDocumentContext();
   const [selectedContent, setSelectedContent] = useState<string>("");
@@ -30,6 +32,12 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   const [activeTab, setActiveTab] = useState<"article" | "chapter">("article");
   const [bgColor, setBgColor] = useState("#CEECCF");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (params.id === "null" || !params.id) {
+      router.push("/404");
+    }
+  }, [params.id, router]);
 
   const togglePanel = useCallback(() => setLeftCollapsed((prev) => !prev), []);
 
@@ -42,7 +50,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   const handleNodeTreeSelect = useCallback((content: string) => {
     setSelectedContent(content);
     setMarkdownTreeContent(content);
-    // 当选择节点树中的节点时，重置 Markdown 树的选中内容
+    // 当选��节点树中的节点时，重置 Markdown 树的选中内容
     setSelectedMarkdownContent("");
   }, []);
 

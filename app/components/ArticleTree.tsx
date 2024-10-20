@@ -42,7 +42,7 @@ import {
   DELETE_DOCUMENTS_AND_CHILDREN,
 } from "../graphql/mutations";
 import { useDocumentContext } from "../contexts/DocumentContext";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useToast } from "../contexts/ToastContext";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
@@ -64,6 +64,7 @@ const GENERATE_KNOWLEDGE_GRAPH = gql`
 `;
 
 const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
+  const router = useRouter();
   const params = useParams();
   const documentId = params?.id as string;
   const { selectedNode, setSelectedNode } = useDocumentContext();
@@ -476,6 +477,12 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [closeContextMenu, handleKeyDown]);
+
+  useEffect(() => {
+    if (data && data.documents && data.documents.length === 0) {
+      router.push("/404");
+    }
+  }, [data, router]);
 
   if (loading) return <TreeSkeleton />;
   if (error)
