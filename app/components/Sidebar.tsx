@@ -12,6 +12,7 @@ import {
   ChevronRightIcon,
   UserCircleIcon,
   UserIcon,
+  UserMinusIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./LoginModal";
@@ -107,26 +108,20 @@ const Sidebar: React.FC = () => {
         </div>
         <div className="p-4">
           {user ? (
-            <div
-              className={`flex items-center ${
-                collapsed ? "flex-col" : "justify-between"
-              }`}
-            >
-              <Image
-                src="/logo.png"
-                alt="User Avatar"
-                width={32}
-                height={32}
-                className="rounded-full"
-              />
-              {!collapsed && (
-                <div
-                  onClick={handleLogout}
-                  className="flex items-center space-x-2 text-error"
-                >
-                  <span>注销</span>
-                </div>
-              )}
+            <div className="flex flex-col items-center justify-center">
+              <div
+                className={`flex items-center w-full h-full p-4 hover:bg-forest-hover ${
+                  collapsed ? "flex-col" : "justify-center"
+                }`}
+                onClick={handleLogout}
+              >
+                <UserMinusIcon className="w-6 h-6" />
+                {!collapsed && (
+                  <div className="flex items-center space-x-2">
+                    <span className="ml-4">注销</span>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center">
