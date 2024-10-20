@@ -34,6 +34,12 @@ import {
   updateEdgeStylesOnNodeClick,
 } from "../utils/treeUtils";
 import CustomNode from "./CustomNode";
+import {
+  HORIZONTAL_GAP,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  VERTICAL_GAP,
+} from "../utils/constant";
 
 const ChapterTree: React.FC = () => {
   const { selectedNode, setSelectedNode } = useDocumentContext();
@@ -58,6 +64,7 @@ const ChapterTree: React.FC = () => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     const graph = new dagre.graphlib.Graph();
+    let yOffset = 0;
 
     graph.setGraph({ rankdir: layout });
     graph.setDefaultEdgeLabel(() => ({}));
@@ -66,9 +73,12 @@ const ChapterTree: React.FC = () => {
       nodes.push({
         id: node.id,
         data: { label: node.fileName, content: node.content, depth },
-        position: { x: 0, y: 0 },
         type: "customNode",
+        position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
+        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       });
+
+      yOffset += NODE_HEIGHT + VERTICAL_GAP;
 
       node.children.forEach((child) => {
         addNodesAndEdges(child, depth + 1);
@@ -85,7 +95,9 @@ const ChapterTree: React.FC = () => {
 
     parsedMarkdownRef.current.forEach((node) => addNodesAndEdges(node));
 
-    nodes.forEach((node) => graph.setNode(node.id, { width: 200, height: 40 }));
+    nodes.forEach((node) =>
+      graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
+    );
     edges.forEach((edge) => graph.setEdge(edge.source, edge.target));
 
     dagre.layout(graph);
