@@ -187,69 +187,66 @@ export default function WritePage({ params }: { params: { id: string } }) {
         style={{ marginLeft: leftCollapsed ? "4rem" : "16rem" }}
       >
         <div className="flex-1 flex overflow-hidden">
-          <div className={`${panelClass(leftCollapsed)} bg-base-200 z-10`}>
+          <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar z-10`}>
             <div
               className={`w-full h-full flex flex-col ${
                 leftCollapsed ? "invisible" : "visible"
               }`}
             >
-              <div className="flex flex-col border-b border-forest-border">
-                <div className="flex items-center h-14 relative">
-                  {isSearchMode ? (
-                    <form
-                      onSubmit={handleSearch}
-                      className="w-full flex items-center"
+              <div className="flex border-b border-forest-border h-14">
+                {isSearchMode ? (
+                  <form
+                    onSubmit={handleSearch}
+                    className="w-full flex items-center px-4"
+                  >
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="搜索文档..."
+                      className="w-full px-3 py-2 bg-forest-bg text-forest-text border border-forest-border rounded focus:outline-none focus:ring-2 focus:ring-forest-accent"
+                    />
+                    <button
+                      onClick={() => setIsSearchMode(false)}
+                      className="ml-2 p-1 bg-forest-bg text-forest-text border border-forest-border rounded"
                     >
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="搜索文档..."
-                        className="w-full px-3 py-2 ml-12 bg-forest-bg text-forest-text border border-forest-border rounded focus:outline-none focus:ring-2 focus:ring-forest-accent" // 更新样式
-                      />
-                      <button
-                        onClick={() => setIsSearchMode(false)}
-                        className="ml-2 p-1 bg-forest-bg text-forest-text border border-forest-border rounded"
-                      >
-                        <ArrowLeftIcon className="w-5 h-5" />
-                      </button>
-                    </form>
-                  ) : (
-                    <>
-                      <button
-                        className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
-                          activeTab === "node"
-                            ? "text-forest-accent"
-                            : "text-forest-text hover:text-forest-accent"
-                        }`}
-                        onClick={() => setActiveTab("node")}
-                      >
-                        <BookOpenIcon className="w-5 h-5 mr-2 inline-block" />
-                        Article
-                      </button>
-                      <button
-                        className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
-                          activeTab === "markdown"
-                            ? "text-forest-accent"
-                            : "text-forest-text hover:text-forest-accent"
-                        }`}
-                        onClick={() => setActiveTab("markdown")}
-                      >
-                        <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
-                        Chapter
-                      </button>
-                      <button
-                        className="ml-auto p-2 text-forest-text hover:text-forest-accent"
-                        onClick={() => setIsSearchMode(true)}
-                      >
-                        <MagnifyingGlassIcon className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-                  {/* 移除下划线 */}
-                </div>
+                      <ArrowLeftIcon className="w-5 h-5" />
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <button
+                      className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
+                        activeTab === "node"
+                          ? "text-forest-accent border-b-2 border-forest-accent"
+                          : "text-forest-text hover:text-forest-accent"
+                      }`}
+                      onClick={() => setActiveTab("node")}
+                    >
+                      <BookOpenIcon className="w-5 h-5 mr-2 inline-block" />
+                      Article
+                    </button>
+                    <button
+                      className={`flex-1 py-2 px-4 text-sm font-medium transition-colors duration-200 ${
+                        activeTab === "markdown"
+                          ? "text-forest-accent border-b-2 border-forest-accent"
+                          : "text-forest-text hover:text-forest-accent"
+                      }`}
+                      onClick={() => setActiveTab("markdown")}
+                    >
+                      <DocumentTextIcon className="w-5 h-5 mr-2 inline-block" />
+                      Chapter
+                    </button>
+                    <button
+                      className="ml-auto p-2 text-forest-text hover:text-forest-accent"
+                      onClick={() => setIsSearchMode(true)}
+                    >
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
               </div>
-              <div className="h-full overflow-y-auto">
+              <div className="flex-grow overflow-hidden p-2">
                 {isSearchMode ? (
                   <div className="h-full overflow-y-auto">
                     <SearchResults
