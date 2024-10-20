@@ -6,6 +6,7 @@ import { AI_CHAT } from "../graphql/mutations";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import Header from "../components/Header";
+import LoginPrompt from "../components/LoginPrompt";
 
 interface Message {
   type: "user" | "ai";
@@ -44,15 +45,7 @@ export default function AiChatPage() {
     return (
       <div className="min-h-screen flex flex-col bg-forest-bg text-forest-text">
         <Header />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="text-center p-8 bg-forest-sidebar rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">需要登录</h2>
-            <p className="mb-6">请登录后使用AI聊天功能。</p>
-            <a href="/login" className="btn btn-primary">
-              前往登录
-            </a>
-          </div>
-        </div>
+        <LoginPrompt title="需要登录" message="请登录后使用AI功能。" />
       </div>
     );
   }

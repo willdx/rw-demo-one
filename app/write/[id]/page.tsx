@@ -18,18 +18,16 @@ import {
   MagnifyingGlassIcon,
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
-import debounce from "lodash/debounce";
 import { highlightSearchResult } from "../../utils/markdownUtils";
 import SearchResults, { SearchResult } from "../../components/SearchResults";
 import { useInView } from "react-intersection-observer";
 import { useToast } from "../../contexts/ToastContext";
 import { useDocumentContext } from "@/app/contexts/DocumentContext";
 import ArticleTree from "../../components/ArticleTree";
-import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
-
-export default function WritePage({ params }: { params: { id: string } }) {
-  const { token, user } = useAuth();
+import LoginPrompt from "@/app/components/LoginPrompt";
+export default function WritePage() {
+  const { token, user, rootId } = useAuth();
   const { showToast } = useToast();
   const { selectedNode, setSelectedNode } = useDocumentContext();
 
@@ -40,15 +38,16 @@ export default function WritePage({ params }: { params: { id: string } }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [hasMoreResults, setHasMoreResults] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   const searchVariables = useMemo(
     () => ({
       searchTerm: searchQuery,
       first: 10,
       creatorId: user ? user.id : null,
     }),
-    [searchQuery]
+    [searchQuery, user]
   );
-  console.log("#searchVariables:", searchVariables);
 
   const {
     data: searchData,
@@ -93,7 +92,7 @@ export default function WritePage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (searchData && searchData.documentsConnection) {
       const processedResults = searchData.documentsConnection.edges.map(
-        ({ node }: { node: any }) => ({
+        ({ node }: { node: SearchResult }) => ({
           ...node,
           matchedContent: highlightSearchResult(node.content, searchQuery),
           updatedAt: node.updatedAt,
@@ -119,7 +118,7 @@ export default function WritePage({ params }: { params: { id: string } }) {
 
   const handleSearchResultClick = useCallback(
     (result: SearchResult) => {
-      setSelectedNode(result);
+      setSelectedNode(result as any);
     },
     [setSelectedNode]
   );
@@ -162,19 +161,27 @@ export default function WritePage({ params }: { params: { id: string } }) {
     }
   }, [inView, hasMoreResults, searchLoading, handleLoadMore]);
 
+  useEffect(() => {
+    const handleSidebarToggle = (e: CustomEvent) => {
+      setSidebarCollapsed(e.detail.collapsed);
+    };
+    window.addEventListener(
+      "sidebarToggle",
+      handleSidebarToggle as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "sidebarToggle",
+        handleSidebarToggle as EventListener
+      );
+    };
+  }, []);
+
   if (!user) {
     return (
       <div className="min-h-screen flex flex-row bg-forest-bg text-forest-text">
         <Sidebar />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="text-center p-8 bg-forest-sidebar rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">需要登录</h2>
-            <p className="mb-6">请登录后使用写作功能。</p>
-            <a href="/login" className="btn btn-primary">
-              前往登录
-            </a>
-          </div>
-        </div>
+        <LoginPrompt title="需要登录" message="请登录后使用写作功能。" />
       </div>
     );
   }
@@ -183,11 +190,16 @@ export default function WritePage({ params }: { params: { id: string } }) {
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <div
-        className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
-        style={{ marginLeft: leftCollapsed ? "4rem" : "16rem" }}
+        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
+          sidebarCollapsed ? "ml-16" : "ml-64"
+        }`}
       >
         <div className="flex-1 flex overflow-hidden">
-          <div className={`${panelClass(leftCollapsed)} bg-forest-sidebar z-10`}>
+          <div
+            className={`${panelClass(
+              leftCollapsed
+            )} bg-forest-sidebar z-10 border-r border-forest-border`}
+          >
             <div
               className={`w-full h-full flex flex-col ${
                 leftCollapsed ? "invisible" : "visible"
@@ -275,15 +287,15 @@ export default function WritePage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* 切换面板按钮 */}
+          {/* 移动折叠按钮到中间位置 */}
           <button
             onClick={togglePanel}
-            className="absolute left-0 top-1/2 -translate-y-1/2 mt-2 ml-2 p-2 bg-base-200 hover:bg-base-300 rounded-md transition-colors duration-200 z-30"
+            className="absolute left-0 top-1/2 -translate-y-1/2 p-2 bg-forest-sidebar hover:bg-forest-hover rounded-r-md transition-colors duration-200 z-30"
           >
             {leftCollapsed ? (
-              <ChevronRightIcon className="w-5 h-5" />
+              <ChevronRightIcon className="w-5 h-5 text-forest-text" />
             ) : (
-              <ChevronLeftIcon className="w-5 h-5" />
+              <ChevronLeftIcon className="w-5 h-5 text-forest-text" />
             )}
           </button>
 

@@ -17,6 +17,7 @@ import ArticleTree from "../../components/ArticleTree";
 import ChapterTree from "@/app/components/ChapterTree";
 import { useAuth } from "../../contexts/AuthContext";
 import Sidebar from "../../components/Sidebar";
+import LoginPrompt from "@/app/components/LoginPrompt";
 
 const ReadPage = ({ params }: { params: { id: string } }) => {
   const { user } = useAuth();
@@ -76,22 +77,15 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
     setBgColor(color);
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-row bg-forest-bg text-forest-text">
-        <Sidebar />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="text-center p-8 bg-forest-sidebar rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">需要登录</h2>
-            <p className="mb-6">请登录后查看文档。</p>
-            <a href="/login" className="btn btn-primary">
-              前往登录
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // read页面是用来访问公开的数据，所以不需要判断是否登录
+  // if (!user) {
+  //   return (
+  //     <div className="min-h-screen flex flex-row bg-forest-bg text-forest-text">
+  //       <Sidebar />
+  //       <LoginPrompt title="需要登录" message="请登录后阅读共享文档。" />
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="flex h-screen overflow-hidden">

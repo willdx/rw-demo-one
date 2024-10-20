@@ -1,106 +1,178 @@
 "use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../contexts/ToastContext";
+import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import {
   HomeIcon,
   BookOpenIcon,
   PencilIcon,
   ChatBubbleLeftRightIcon,
-  UserCircleIcon,
-  ArrowLeftOnRectangleIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
-} from '@heroicons/react/24/outline';
+  ChevronRightIcon,
+  UserCircleIcon,
+  UserIcon,
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../contexts/AuthContext";
+import LoginModal from "./LoginModal";
+import RegisterModal from "./RegisterModal";
 
-export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const { user, logout, rootId } = useAuth();
-  const { showToast } = useToast();
+const Sidebar: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(false);
+  const { user, logout, login } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const { rootId } = useAuth();
+  const toggleSidebar = () => {
+    const newCollapsedState = !collapsed;
+    setCollapsed(newCollapsedState);
+    window.dispatchEvent(
+      new CustomEvent("sidebarToggle", {
+        detail: { collapsed: newCollapsedState },
+      })
+    );
+  };
+
+  const navItems = [
+    { href: "/", icon: HomeIcon, label: "首页" },
+    { href: `/share`, icon: BookOpenIcon, label: "阅读" },
+    // 写作和智能问答功能都需要在登录的情况下才能打开 所以这里做一个判断如果当前user为假那么后两条写作和智能问答的数据就不要写入 navItems中
+    ...(user
+      ? [
+          { href: `/write/${rootId}`, icon: PencilIcon, label: "写作" },
+          {
+            href: "/ai-chat",
+            icon: ChatBubbleLeftRightIcon,
+            label: "智能问答",
+          },
+        ]
+      : []),
+  ];
 
   const handleLogout = () => {
     logout();
-    showToast("已注销！", "success");
   };
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  const handleLoginSuccess = (token: string, user: any) => {
+    login(token, user);
+    setIsLoginModalOpen(false);
+  };
+
+  const handleRegisterSuccess = (token: string, user: any) => {
+    login(token, user);
+    setIsRegisterModalOpen(false);
+  };
 
   return (
-    <div className={`fixed left-0 top-0 h-full bg-base-200 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
-      <button 
-        className="absolute -right-3 top-4 bg-base-200 p-1 rounded-full"
-        onClick={toggleSidebar}
+    <>
+      <div
+        className={`fixed top-0 left-0 h-full bg-forest-sidebar text-forest-text transition-all duration-300 ease-in-out ${
+          collapsed ? "w-16" : "w-64"
+        } flex flex-col justify-between border-r border-forest-border-dark`}
       >
-        {isCollapsed ? <ChevronRightIcon className="w-4 h-4" /> : <ChevronLeftIcon className="w-4 h-4" />}
-      </button>
-
-      <div className="p-4">
-        <Link href="/" className="flex items-center space-x-2">
-          <Image src="/logo.png" alt="Logo" width={40} height={40} />
-          {!isCollapsed && <span className="text-xl font-bold">读写</span>}
-        </Link>
-      </div>
-
-      <ul className="menu p-4 w-full">
-        <li>
-          <Link href="/" className="flex items-center space-x-2 py-2">
-            <HomeIcon className="w-6 h-6" />
-            {!isCollapsed && <span>主页</span>}
-          </Link>
-        </li>
-        <li>
-          <Link href="/share" className="flex items-center space-x-2 py-2">
-            <BookOpenIcon className="w-6 h-6" />
-            {!isCollapsed && <span>知识库</span>}
-          </Link>
-        </li>
-        <li>
-          <Link href={rootId ? `/write/${rootId}` : '#'} className={`flex items-center space-x-2 py-2 ${!rootId && 'pointer-events-none opacity-50'}`}>
-            <PencilIcon className="w-6 h-6" />
-            {!isCollapsed && <span>写作</span>}
-          </Link>
-        </li>
-        <li>
-          <Link href="/ai-chat" className="flex items-center space-x-2 py-2">
-            <ChatBubbleLeftRightIcon className="w-6 h-6" />
-            {!isCollapsed && <span>智能问答</span>}
-          </Link>
-        </li>
-      </ul>
-
-      <div className="absolute bottom-0 left-0 w-full p-4">
-        {user ? (
-          <div className="flex items-center space-x-2">
-            <Image
-              src="/logo.png"
-              alt="User Avatar"
-              width={32}
-              height={32}
-              className="rounded-full"
-            />
-            {!isCollapsed && (
-              <button onClick={handleLogout} className="flex items-center space-x-2 text-error">
-                <ArrowLeftOnRectangleIcon className="w-6 h-6" />
-                <span>注销</span>
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Link href="#" onClick={() => {/* 打开登录框 */}} className="btn btn-sm btn-outline w-full">
-              <UserCircleIcon className="w-5 h-5 mr-2" />
-              {!isCollapsed && "登录"}
+        <div>
+          <div className="p-4 flex justify-between items-center">
+            <Link href="/" className="flex items-center space-x-2">
+              <Image src="/logo.png" alt="Logo" width={40} height={40} />
+              {!collapsed && <span className="text-xl font-bold">读写</span>}
             </Link>
-            <Link href="#" onClick={() => {/* 打开注册框 */}} className="btn btn-sm btn-primary w-full">
-              <UserCircleIcon className="w-5 h-5 mr-2" />
-              {!isCollapsed && "注册"}
-            </Link>
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-full hover:bg-forest-hover"
+            >
+              {collapsed ? (
+                <ChevronRightIcon className="w-5 h-5" />
+              ) : (
+                <ChevronLeftIcon className="w-5 h-5" />
+              )}
+            </button>
           </div>
-        )}
+          <nav>
+            <ul>
+              {navItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center p-4 hover:bg-forest-hover ${
+                      collapsed ? "justify-center" : ""
+                    }`}
+                  >
+                    <item.icon className="w-6 h-6" />
+                    {!collapsed && <span className="ml-4">{item.label}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+        <div className="p-4">
+          {user ? (
+            <div
+              className={`flex items-center ${
+                collapsed ? "flex-col" : "justify-between"
+              }`}
+            >
+              <Image
+                src="/logo.png"
+                alt="User Avatar"
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
+              {!collapsed && (
+                <div
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 text-error"
+                >
+                  <span>注销</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center">
+              <div
+                className={`flex items-center w-full h-full p-4 hover:bg-forest-hover ${
+                  collapsed ? "flex-col" : "justify-center"
+                }`}
+                onClick={() => setIsLoginModalOpen(true)}
+              >
+                <UserCircleIcon className="w-6 h-6" />
+                {!collapsed && (
+                  <div className="flex items-center space-x-2">
+                    <span className="ml-4">登录</span>
+                  </div>
+                )}
+              </div>
+
+              <div
+                className={`flex items-center w-full h-full p-4 hover:bg-forest-hover ${
+                  collapsed ? "flex-col" : "justify-center"
+                }`}
+                onClick={() => setIsRegisterModalOpen(true)}
+              >
+                <UserIcon className="w-6 h-6" />
+                {!collapsed && (
+                  <div className="flex items-center space-x-2">
+                    <span className="ml-4">注册</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onRegisterSuccess={handleRegisterSuccess}
+      />
+    </>
   );
-}
+};
+
+export default Sidebar;
