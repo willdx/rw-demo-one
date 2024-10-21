@@ -39,6 +39,7 @@ import {
   NODE_HEIGHT,
   NODE_WIDTH,
   VERTICAL_GAP,
+  nodeTypes,
 } from "../utils/constant";
 
 const ChapterTree: React.FC = () => {
@@ -214,7 +215,7 @@ const ChapterTree: React.FC = () => {
       fitViewOptions={{ padding: 0.2 }}
       proOptions={{ hideAttribution: true }}
       className="w-full h-full bg-forest-bg"
-      nodeTypes={{ customNode: CustomNode }}
+      nodeTypes={nodeTypes}
     >
       <Controls>
         <ControlButton onClick={onToggleLayout} title="切换布局">

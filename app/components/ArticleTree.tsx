@@ -344,7 +344,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         showToast("节点添加成功", "success");
       } catch (error) {
         console.error("添加节点失败:", error);
-        showToast("添加节点失败，请重试", "error");
+        showToast("添加节点失败，请重���", "error");
       }
     },
     [createSubDocument, refetch, setSelectedNode, showToast, user]

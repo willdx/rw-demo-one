@@ -43,20 +43,18 @@ export const formatGraphData = (
     const nodeId = node.id;
     nodes.push({
       ...node,
-      ...{
-        type: "customNode",
-        data: {
-          label: node.fileName,
-          content: node.content,
-          depth,
-          isSelected: false,
-          isDragging: false,
-          isPossibleTarget: false,
-          layout,
-        },
-        position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
-        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
+      type: "customNode", // 确保这里设置为 "customNode"
+      data: {
+        label: node.fileName,
+        content: node.content,
+        depth,
+        isSelected: false,
+        isDragging: false,
+        isPossibleTarget: false,
+        layout,
       },
+      position: { x: depth * (NODE_WIDTH + HORIZONTAL_GAP), y: yOffset },
+      style: { width: NODE_WIDTH, height: NODE_HEIGHT },
     });
 
     yOffset += NODE_HEIGHT + VERTICAL_GAP;
