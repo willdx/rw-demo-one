@@ -113,14 +113,14 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden bg-forest-content relative">
-            <div className="absolute top-2 right-8 z-1">
+            <div className="absolute top-2 right-4">
               <div className="dropdown dropdown-end">
-                <label tabIndex={0} className="btn btn-ghost btn-circle">
-                  <SwatchIcon className="w-5 h-5" />
+                <label tabIndex={0} className="btn btn-sm btn-ghost btn-circle">
+                  <SwatchIcon className="w-4 h-4" />
                 </label>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content z-30 menu p-2 shadow bg-base-100 rounded-box w-52"
+                  className="dropdown-content z-1 menu p-2 shadow bg-base-100 rounded-box w-48"
                 >
                   {[
                     "#F7F7F7",
