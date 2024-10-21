@@ -474,12 +474,12 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   }, [selectedNode, generateKnowledgeGraph]);
 
   const handlePublishToggle = useCallback(
-    async (nodeId: string, currentPublishState: boolean) => {
+    async (nodeId: string, publishState: boolean) => {
       try {
         await updateDocumentIsPublished({
           variables: {
             id: nodeId,
-            isPublished: !currentPublishState,
+            isPublished: publishState,
           },
         });
         showToast("发布状态更新成功", "success");
@@ -586,10 +586,16 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
               </a>
               <a
                 onClick={() => {
-                  if (selectedNode?.isPublished) {
+                  console.log("#handlePublishToggle...");
+                  console.log("selectedNode:", selectedNode);
+                  console.log(
+                    "selectedNode?.isPublished:",
+                    selectedNode?.isPublished
+                  );
+                  if (selectedNode) {
                     handlePublishToggle(
                       selectedNode?.id,
-                      !selectedNode?.isPublished
+                      selectedNode?.isPublished ? false : true
                     );
                   }
                   closeContextMenu();
