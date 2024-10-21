@@ -113,7 +113,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden bg-forest-content relative">
-            <div className="absolute top-2 right-2 z-20">
+            <div className="absolute top-2 right-8 z-1">
               <div className="dropdown dropdown-end">
                 <label tabIndex={0} className="btn btn-ghost btn-circle">
                   <SwatchIcon className="w-5 h-5" />
@@ -146,7 +146,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
 
             {/* 内容显示区域 */}
             <div
-              className="flex-grow overflow-auto p-4 rounded-md shadow-md transition-colors duration-200"
+              className="flex-grow overflow-auto pt-4 rounded-md shadow-md transition-colors duration-200"
               style={{ backgroundColor: bgColor }}
             >
               {selectedNode ? (

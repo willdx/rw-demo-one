@@ -13,12 +13,8 @@ const MarkdownRenderer: React.FC<{}> = () => {
   console.log("selectedNode:", selectedNode);
 
   return (
-    <div className="h-full p-4 overflow-auto grid place-items-center">
-      {" "}
-      {/* 使用 Grid 布局 */}
-      <div className="prose prose-forest dark:prose-invert max-w-3xl bg-forest-content p-8 rounded-lg shadow-sm border border-forest-border w-full">
-        {" "}
-        {/* 内层容器用于控制宽度和样式 */}
+    <div className="h-full overflow-auto grid place-items-center">
+      <div className="prose prose-forest dark:prose-invert bg-forest-content p-8 rounded-lg shadow-sm border border-forest-border w-full">
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex]}

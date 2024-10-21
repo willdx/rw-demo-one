@@ -132,7 +132,10 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   useEffect(() => {
     if (data?.documents?.length) {
-      const { nodes: initialNodes, edges } = formatGraphData(data.documents[0], "LR");
+      const { nodes: initialNodes, edges } = formatGraphData(
+        data.documents[0],
+        "LR"
+      );
       setNodes(
         initialNodes.map((n) => ({
           ...n,
@@ -505,7 +508,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     }
   }, [data, router]);
 
-  if (loading) return <TreeSkeleton />;
+  // if (loading) return <TreeSkeleton />;
   if (error)
     return (
       <div className="alert alert-error">
