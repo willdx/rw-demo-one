@@ -64,16 +64,18 @@ const VditorEditor: React.FC = () => {
       const content = editorRef.current.getValue();
       let modifiedAritcleContent = editorRef.current.getValue();
       try {
-        const selectedChapter = selectedNodeRef.current.selectedChapter;
+        const selectedChapter = selectedNodeRef.current.selectedChapter; // 获取selectedNode的selectedNode.selectedChapter的Ref
         if (selectedChapter) {
-          console.log("更新章节内容:", selectedChapter?.data?.content);
           const articleContent = selectedNodeRef.current.content;
           const chapterContentFrom = selectedChapter?.data?.content;
           const chapterContentTo = content;
+          console.log("此时选中节点的章节内容(from):", chapterContentFrom);
+          console.log("此时vditor内容:", chapterContentTo);
           modifiedAritcleContent = articleContent.replace(
-            chapterContentFrom,
+            chapterContentFrom.trim(),
             chapterContentTo
           );
+          console.log("修改后的文章内容:", modifiedAritcleContent);
         }
         await updateDocumentContent({
           variables: {
@@ -84,10 +86,18 @@ const VditorEditor: React.FC = () => {
             },
           },
         });
+        // 如果这里selectedChapter的数据没更新, 后续的selectedChapter.data.content还是旧数据, 导致vditor的内容更改之后就变化
         setSelectedNode((prevNode: any) => {
           if (prevNode) {
             return {
               ...prevNode,
+              selectedChapter: {
+                ...selectedNodeRef.current.selectedChapter,
+                data: {
+                  ...selectedNodeRef.current.selectedChapter.data,
+                  content: content,
+                },
+              },
               content: modifiedAritcleContent,
               fileName: extractFileName(modifiedAritcleContent),
             };
