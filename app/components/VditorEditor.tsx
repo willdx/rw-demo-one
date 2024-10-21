@@ -94,7 +94,7 @@ const VditorEditor: React.FC = () => {
               selectedChapter: {
                 ...selectedNodeRef.current.selectedChapter,
                 data: {
-                  ...selectedNodeRef.current.selectedChapter.data,
+                  ...selectedNodeRef.current.selectedChapter?.data,
                   content: content,
                 },
               },
