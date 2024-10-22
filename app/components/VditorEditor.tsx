@@ -89,14 +89,14 @@ const VditorEditor: React.FC = () => {
             },
           });
           // 如果这里selectedChapter的数据没更新, 后续的selectedChapter.data.content还是旧数据, 导致vditor的内容更改之后就变化
-          setSelectedNode((prevNode: any) => {
+          setSelectedNode((prevNode: MarkdownNode | null) => {
             if (prevNode) {
               return {
                 ...prevNode,
                 selectedChapter: {
-                  ...selectedNodeRef.current.selectedChapter,
+                  ...prevNode.selectedChapter,
                   data: {
-                    ...selectedNodeRef.current.selectedChapter?.data,
+                    ...prevNode.selectedChapter?.data,
                     content: content,
                   },
                 },
@@ -138,6 +138,26 @@ const VditorEditor: React.FC = () => {
         cache: {
           enable: false,
         },
+        upload: {
+          url: "/api/upload-image",
+          fieldName: "image",
+          success: (editor: HTMLPreElement, msg: string) => {
+            const res = JSON.parse(msg);
+            if (res.success && res.data && res.data.link) {
+              const imageUrl = res.data.link;
+              // 使用 editorRef.current 来插入图片
+              if (editorRef.current) {
+                editorRef.current.insertValue(`![image](${imageUrl})`);
+              }
+              showToast("图片上传成功", "success");
+            } else {
+              showToast("图片上传失败", "error");
+            }
+          },
+          error: () => {
+            showToast("图片上传失败", "error");
+          },
+        },
         after: () => {
           console.log("Vditor 编辑器初始化完成");
           setIsEditorReady(true);
@@ -154,7 +174,7 @@ const VditorEditor: React.FC = () => {
         },
       });
     }
-  }, [debouncedSaveContent, scheduleNextSave, triggerImmediateSave]);
+  }, [debouncedSaveContent, scheduleNextSave, triggerImmediateSave, showToast]);
 
   useEffect(() => {
     if (isEditorReady && editorRef.current && selectedNode) {
