@@ -11,6 +11,8 @@ import { useToast } from "../contexts/ToastContext";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
 
+const DELAY_MS = 30000; // 30 seconds自动保存
+
 const VditorEditor: React.FC = () => {
   const { showToast } = useToast();
   const editorRef = useRef<Vditor | null>(null);
@@ -86,7 +88,7 @@ const VditorEditor: React.FC = () => {
   const debouncedSaveContent = useRef(
     debounce(() => {
       saveContent();
-    }, 10000)
+    }, DELAY_MS)
   ).current;
 
   useEffect(() => {
@@ -123,7 +125,7 @@ const VditorEditor: React.FC = () => {
 
           // 添加工具栏操作事件监听器, 用于监听工具栏操作，并区分是否是工具栏操作导致的失焦。
           const toolbarItems = document.querySelectorAll(
-            ".vditor-toolbar button, .vditor-toolbar input"
+            ".vditor-toolbar button, .vditor-toolbar input, .vditor-content button"
           );
           toolbarItems.forEach((item) => {
             item.addEventListener("mousedown", () => {
@@ -133,8 +135,8 @@ const VditorEditor: React.FC = () => {
         },
         input: () => {
           // 所有的内容修改, 都会触发相同的延迟保存机制
-          contentModifiedRef.current = true;
           debouncedSaveContent();
+          contentModifiedRef.current = true;
         },
         blur: () => {
           // 当因为点击工具栏操作而触发的失焦，不应该被认为是失焦，而应该认为是正常的用户输入，所以触发相同的延迟保存机制。
