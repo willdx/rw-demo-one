@@ -9,6 +9,7 @@ import { UPDATE_DOCUMENT_CONTENT } from "../graphql/queries";
 import { extractFileName } from "../utils/markdownUtils";
 import { useToast } from "../contexts/ToastContext";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import debounce from "lodash/debounce";
 
 // 自定义 hook 用于滑动窗口保存机制
 function useSlideWindowSave(saveFunction: () => void, delay: number = 10000) {
@@ -63,49 +64,53 @@ const VditorEditor: React.FC = () => {
     ) {
       const content = editorRef.current.getValue();
       let modifiedAritcleContent = editorRef.current.getValue();
+      const articleContent = selectedNodeRef.current.content;
       try {
-        const selectedChapter = selectedNodeRef.current.selectedChapter; // 获取selectedNode的selectedNode.selectedChapter的Ref
+        const selectedChapter = selectedNodeRef.current.selectedChapter; // 获取selectedNode的selectedChapter的Ref
         if (selectedChapter) {
-          const articleContent = selectedNodeRef.current.content;
           const chapterContentFrom = selectedChapter?.data?.content;
           const chapterContentTo = content;
           console.log("此时选中节点的章节内容(from):", chapterContentFrom);
           console.log("此时vditor内容:", chapterContentTo);
           modifiedAritcleContent = articleContent.replace(
             chapterContentFrom.trim(),
-            chapterContentTo
+            chapterContentTo.trim()
           );
           console.log("修改后的文章内容:", modifiedAritcleContent);
         }
-        await updateDocumentContent({
-          variables: {
-            where: { id: selectedNodeRef.current.id },
-            update: {
-              content: modifiedAritcleContent,
-              fileName: extractFileName(modifiedAritcleContent),
-            },
-          },
-        });
-        // 如果这里selectedChapter的数据没更新, 后续的selectedChapter.data.content还是旧数据, 导致vditor的内容更改之后就变化
-        setSelectedNode((prevNode: any) => {
-          if (prevNode) {
-            return {
-              ...prevNode,
-              selectedChapter: {
-                ...selectedNodeRef.current.selectedChapter,
-                data: {
-                  ...selectedNodeRef.current.selectedChapter?.data,
-                  content: content,
-                },
+        if (articleContent !== modifiedAritcleContent) {
+          await updateDocumentContent({
+            variables: {
+              where: { id: selectedNodeRef.current.id },
+              update: {
+                content: modifiedAritcleContent,
+                fileName: extractFileName(modifiedAritcleContent),
               },
-              content: modifiedAritcleContent,
-              fileName: extractFileName(modifiedAritcleContent),
-            };
-          }
-          return prevNode;
-        });
-        setSaveStatus("已保存");
-        contentModifiedRef.current = false;
+            },
+          });
+          // 如果这里selectedChapter的数据没更新, 后续的selectedChapter.data.content还是旧数据, 导致vditor的内容更改之后就变化
+          setSelectedNode((prevNode: any) => {
+            if (prevNode) {
+              return {
+                ...prevNode,
+                selectedChapter: {
+                  ...selectedNodeRef.current.selectedChapter,
+                  data: {
+                    ...selectedNodeRef.current.selectedChapter?.data,
+                    content: content,
+                  },
+                },
+                content: modifiedAritcleContent,
+                fileName: extractFileName(modifiedAritcleContent),
+              };
+            }
+            return prevNode;
+          });
+          setSaveStatus("已保存");
+          contentModifiedRef.current = false;
+        } else {
+          console.log("未修改文档内容");
+        }
       } catch (error) {
         showToast("保存文档时出错", "error");
         console.error("保存文档时出错:", error);
@@ -116,6 +121,13 @@ const VditorEditor: React.FC = () => {
 
   const { scheduleNextSave, triggerImmediateSave } =
     useSlideWindowSave(saveContent);
+
+  const debouncedSaveContent = useCallback(
+    debounce(() => {
+      saveContent();
+    }, 200),
+    [saveContent]
+  );
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -137,12 +149,12 @@ const VditorEditor: React.FC = () => {
         },
         blur: () => {
           if (contentModifiedRef.current) {
-            triggerImmediateSave();
+            debouncedSaveContent();
           }
         },
       });
     }
-  }, [scheduleNextSave, triggerImmediateSave]);
+  }, [debouncedSaveContent, scheduleNextSave, triggerImmediateSave]);
 
   useEffect(() => {
     if (isEditorReady && editorRef.current && selectedNode) {
