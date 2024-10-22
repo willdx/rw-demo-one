@@ -11,39 +11,6 @@ import { useToast } from "../contexts/ToastContext";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import debounce from "lodash/debounce";
 
-// 自定义 hook 用于滑动窗口保存机制
-function useSlideWindowSave(saveFunction: () => void, delay: number = 10000) {
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const scheduleNextSave = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-    timerRef.current = setTimeout(() => {
-      saveFunction();
-      timerRef.current = null;
-    }, delay);
-  }, [saveFunction, delay]);
-
-  const triggerImmediateSave = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    saveFunction();
-  }, [saveFunction]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
-  return { scheduleNextSave, triggerImmediateSave };
-}
-
 const VditorEditor: React.FC = () => {
   const { showToast } = useToast();
   const editorRef = useRef<Vditor | null>(null);
@@ -66,7 +33,7 @@ const VditorEditor: React.FC = () => {
       let modifiedAritcleContent = editorRef.current.getValue();
       const articleContent = selectedNodeRef.current.content;
       try {
-        const selectedChapter = selectedNodeRef.current.selectedChapter; // 获取selectedNode的selectedChapter的Ref
+        const selectedChapter = selectedNodeRef.current.selectedChapter;
         if (selectedChapter) {
           const chapterContentFrom = selectedChapter?.data?.content;
           const chapterContentTo = content;
@@ -88,7 +55,6 @@ const VditorEditor: React.FC = () => {
               },
             },
           });
-          // 如果这里selectedChapter的数据没更新, 后续的selectedChapter.data.content还是旧数据, 导致vditor的内容更改之后就变化
           setSelectedNode((prevNode: MarkdownNode | null) => {
             if (prevNode) {
               return {
@@ -117,17 +83,13 @@ const VditorEditor: React.FC = () => {
         setSaveStatus("未保存");
       }
     }
-  }, [updateDocumentContent, setSelectedNode]);
+  }, [updateDocumentContent, setSelectedNode, showToast]);
 
-  const { scheduleNextSave, triggerImmediateSave } =
-    useSlideWindowSave(saveContent);
-
-  const debouncedSaveContent = useCallback(
+  const debouncedSaveContent = useRef(
     debounce(() => {
       saveContent();
-    }, 200),
-    [saveContent]
-  );
+    }, 10000)
+  ).current;
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -145,7 +107,6 @@ const VditorEditor: React.FC = () => {
             const res = JSON.parse(msg);
             if (res.success && res.data && res.data.link) {
               const imageUrl = res.data.link;
-              // 使用 editorRef.current 来插入图片
               if (editorRef.current) {
                 editorRef.current.insertValue(`![image](${imageUrl})`);
               }
@@ -164,17 +125,17 @@ const VditorEditor: React.FC = () => {
         },
         input: () => {
           contentModifiedRef.current = true;
-          scheduleNextSave();
+          debouncedSaveContent();
           setSaveStatus("未保存");
         },
         blur: () => {
           if (contentModifiedRef.current) {
-            debouncedSaveContent();
+            debouncedSaveContent.flush();
           }
         },
       });
     }
-  }, [debouncedSaveContent, scheduleNextSave, triggerImmediateSave, showToast]);
+  }, [debouncedSaveContent, showToast]);
 
   useEffect(() => {
     if (isEditorReady && editorRef.current && selectedNode) {
@@ -190,6 +151,13 @@ const VditorEditor: React.FC = () => {
     }
   }, [isEditorReady, selectedNode]);
 
+  useEffect(() => {
+    return () => {
+      debouncedSaveContent.cancel();
+    };
+  }, [debouncedSaveContent]);
+
+  // 渲染部分保持不变
   return (
     <div className="relative h-full w-full">
       <div id="vditor" className="h-full w-full" />
