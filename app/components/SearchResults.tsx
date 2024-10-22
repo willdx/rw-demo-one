@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { PlayIcon } from "@heroicons/react/24/outline";
 
 export interface SearchResult {
   id: string;
@@ -55,7 +56,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                 className="btn btn-sm btn-outline"
                 onClick={(e) => e.stopPropagation()} // 防止触发卡片的点击事件
               >
-                打开
+                <PlayIcon className="w-4 h-4 mr-1" />
               </button>
             </Link>
           </div>
