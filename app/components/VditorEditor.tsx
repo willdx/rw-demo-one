@@ -23,6 +23,8 @@ const VditorEditor: React.FC = () => {
 
   const [updateDocumentContent] = useMutation(UPDATE_DOCUMENT_CONTENT);
 
+  const toolbarActionRef = useRef<boolean>(false);
+
   const saveContent = useCallback(async () => {
     if (
       editorRef.current &&
@@ -30,20 +32,16 @@ const VditorEditor: React.FC = () => {
       contentModifiedRef.current
     ) {
       const content = editorRef.current.getValue();
-      let modifiedAritcleContent = editorRef.current.getValue();
+      let modifiedAritcleContent = content;
       const articleContent = selectedNodeRef.current.content;
       try {
         const selectedChapter = selectedNodeRef.current.selectedChapter;
         if (selectedChapter) {
           const chapterContentFrom = selectedChapter?.data?.content;
-          const chapterContentTo = content;
-          console.log("此时选中节点的章节内容(from):", chapterContentFrom);
-          console.log("此时vditor内容:", chapterContentTo);
           modifiedAritcleContent = articleContent.replace(
             chapterContentFrom.trim(),
-            chapterContentTo.trim()
+            content.trim()
           );
-          console.log("修改后的文章内容:", modifiedAritcleContent);
         }
         if (articleContent !== modifiedAritcleContent) {
           await updateDocumentContent({
@@ -59,13 +57,15 @@ const VditorEditor: React.FC = () => {
             if (prevNode) {
               return {
                 ...prevNode,
-                selectedChapter: {
-                  ...prevNode.selectedChapter,
-                  data: {
-                    ...prevNode.selectedChapter?.data,
-                    content: content,
-                  },
-                },
+                selectedChapter: selectedChapter
+                  ? {
+                      ...selectedChapter,
+                      data: {
+                        ...selectedChapter.data,
+                        content: content,
+                      },
+                    }
+                  : null,
                 content: modifiedAritcleContent,
                 fileName: extractFileName(modifiedAritcleContent),
               };
@@ -74,8 +74,6 @@ const VditorEditor: React.FC = () => {
           });
           setSaveStatus("已保存");
           contentModifiedRef.current = false;
-        } else {
-          console.log("未修改文档内容");
         }
       } catch (error) {
         showToast("保存文档时出错", "error");
@@ -122,14 +120,29 @@ const VditorEditor: React.FC = () => {
         after: () => {
           console.log("Vditor 编辑器初始化完成");
           setIsEditorReady(true);
+
+          // 添加工具栏操作事件监听器, 用于监听工具栏操作，并区分是否是工具栏操作导致的失焦。
+          const toolbarItems = document.querySelectorAll(
+            ".vditor-toolbar button, .vditor-toolbar input"
+          );
+          toolbarItems.forEach((item) => {
+            item.addEventListener("mousedown", () => {
+              toolbarActionRef.current = true;
+            });
+          });
         },
         input: () => {
+          // 所有的内容修改, 都会触发相同的延迟保存机制
           contentModifiedRef.current = true;
           debouncedSaveContent();
-          setSaveStatus("未保存");
         },
         blur: () => {
-          if (contentModifiedRef.current) {
+          // 当因为点击工具栏操作而触发的失焦，不应该被认为是失焦，而应该认为是正常的用户输入，所以触发相同的延迟保存机制。
+          if (toolbarActionRef.current) {
+            debouncedSaveContent();
+            toolbarActionRef.current = false;
+          } else {
+            // 如果点击其它位置而导致的失焦，则应该立即保存
             debouncedSaveContent.flush();
           }
         },
@@ -143,7 +156,6 @@ const VditorEditor: React.FC = () => {
         selectedNode.selectedChapter?.data?.content ||
         selectedNode.content ||
         "";
-      console.log(`编辑器旧数据长度（未手动更新前）: ${content.length}`);
       editorRef.current.setValue(content);
       selectedNodeRef.current = selectedNode;
       setSaveStatus("已保存");
