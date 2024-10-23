@@ -142,6 +142,12 @@ const typeDefs = gql`
       page: Int = 1
       limit: Int = 10
     ): DocumentSearchResult!
+
+    searchDocumentsWithAuth(
+      searchTerm: String!
+      page: Int = 1
+      limit: Int = 10
+    ): DocumentSearchResult!
   }
 
   type DocumentSearchResult {
@@ -205,6 +211,47 @@ const neoSchema = new Neo4jGraphQL({
 
           return {
             documents: documents.map((doc) => doc.properties),
+            totalCount: totalCount.low,
+          };
+        } finally {
+          await session.close();
+        }
+      },
+      searchDocumentsWithAuth: async (
+        _source,
+        { searchTerm, page, limit },
+        { driver, jwt }
+      ) => {
+        console.log("searchTerm:", searchTerm, page, limit);
+        const session = driver.session();
+        try {
+          const skip = (page - 1) * limit;
+          const cypherSearch = `
+            CALL db.index.fulltext.queryNodes('documentsContentIndex', $searchTerm)
+            YIELD node, score
+            WHERE node:Document
+            AND (node.isPublished = true OR $userId IS NOT NULL AND node.creator.id = $userId OR $isAdmin = true)
+            WITH node, score
+            ORDER BY score DESC
+            SKIP $skip
+            LIMIT $limit
+            RETURN collect(node) as documents, count(node) as totalCount
+          `;
+
+          console.log("Cypher query:", cypherSearch);
+          const result = await session.run(cypherSearch, {
+            searchTerm,
+            skip: neo4j.int(skip),
+            limit: neo4j.int(limit),
+            userId: jwt ? jwt.sub : null,
+            isAdmin: jwt ? jwt.roles.includes('ADMIN') : false
+          });
+
+          const documents = result.records[0].get("documents");
+          const totalCount = result.records[0].get("totalCount");
+
+          return {
+            documents: documents.map((doc: any) => doc.properties),
             totalCount: totalCount.low,
           };
         } finally {
