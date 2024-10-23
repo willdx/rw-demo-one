@@ -135,6 +135,19 @@ const typeDefs = gql`
     id: String!
     score: Float!
   }
+
+  type Query {
+    searchDocuments(
+      searchTerm: String!
+      page: Int = 1
+      limit: Int = 10
+    ): DocumentSearchResult!
+  }
+
+  type DocumentSearchResult {
+    documents: [Document!]!
+    totalCount: Int!
+  }
 `;
 
 const driver = neo4j.driver(
@@ -156,6 +169,49 @@ const neoSchema = new Neo4jGraphQL({
   },
   driver,
   resolvers: {
+    Query: {
+      searchDocuments: async (
+        _source,
+        { searchTerm, page, limit },
+        { driver }
+      ) => {
+        console.log("searchTerm:", searchTerm, page, limit);
+        const session = driver.session();
+        try {
+          const skip = (page - 1) * limit;
+          // 暂时仅支持搜索isPublished文档, 后续需要支持仅搜索我的文档
+          const cypherSearch = `
+            CALL db.index.fulltext.queryNodes('documentsContentIndex', $searchTerm)
+            YIELD node, score
+            WITH node, score
+            ORDER BY score DESC
+            SKIP $skip
+            LIMIT $limit
+            RETURN collect(node) as documents, count(node) as totalCount
+            `;
+          console.log("Cypher query:", cypherSearch);
+          const result = await session.run(cypherSearch, {
+            searchTerm,
+            skip: neo4j.int(skip),
+            limit: neo4j.int(limit),
+          });
+          console.log(
+            "Cypher result:",
+            JSON.stringify(result.records, null, 2)
+          );
+
+          const documents = result.records[0].get("documents");
+          const totalCount = result.records[0].get("totalCount");
+
+          return {
+            documents: documents.map((doc) => doc.properties),
+            totalCount: totalCount.low,
+          };
+        } finally {
+          await session.close();
+        }
+      },
+    },
     Mutation: {
       signUp: async (_source, { username, email, password }) => {
         const [existing] = await User.find({
@@ -262,7 +318,7 @@ const neoSchema = new Neo4jGraphQL({
       createInitialRoles: async () => {
         const existingRoles = await Role.find();
         if (existingRoles.length > 0) {
-          return false; // 角色已存在，不需要创建
+          return false; // 角色已存在，不要创建
         }
 
         await Role.create({
@@ -367,7 +423,7 @@ const neoSchema = new Neo4jGraphQL({
           return response.data; // 直接返回整个响应数据
         } catch (error) {
           console.error("AI 聊天错误:", error);
-          throw new Error("无法处理您的请求，请稍后再试");
+          throw new Error("法处理您的请求，请稍后再试");
         }
       },
     },
@@ -410,16 +466,16 @@ export default startServerAndCreateNextHandler(await createApolloServer(), {
         console.error("无效或过期的令牌", err);
       }
     }
-    console.log("当前用户:", currentUser);
-    console.log("token:", token);
-    console.log("jwt:", decodedToken);
+    // console.log("当前用户:", currentUser);
+    // console.log("token:", token);
+    // console.log("jwt:", decodedToken);
     return {
       req,
       res,
       currentUser,
       token,
       jwt: decodedToken,
-      driver, // 添加这一行，确保 driver 被传递到 context 中
+      driver, // 添加这一行，确保 driver 被传到 context 中
     };
   },
 });
