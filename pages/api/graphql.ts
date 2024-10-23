@@ -142,12 +142,6 @@ const typeDefs = gql`
       page: Int = 1
       limit: Int = 10
     ): DocumentSearchResult!
-
-    searchDocumentsWithAuth(
-      searchTerm: String!
-      page: Int = 1
-      limit: Int = 10
-    ): DocumentSearchResult!
   }
 
   type DocumentSearchResult {
@@ -179,47 +173,6 @@ const neoSchema = new Neo4jGraphQL({
       searchDocuments: async (
         _source,
         { searchTerm, page, limit },
-        { driver }
-      ) => {
-        console.log("searchTerm:", searchTerm, page, limit);
-        const session = driver.session();
-        try {
-          const skip = (page - 1) * limit;
-          // 暂时仅支持搜索isPublished文档, 后续需要支持仅搜索我的文档
-          const cypherSearch = `
-            CALL db.index.fulltext.queryNodes('documentsContentIndex', $searchTerm)
-            YIELD node, score
-            WITH node, score
-            ORDER BY score DESC
-            SKIP $skip
-            LIMIT $limit
-            RETURN collect(node) as documents, count(node) as totalCount
-            `;
-          console.log("Cypher query:", cypherSearch);
-          const result = await session.run(cypherSearch, {
-            searchTerm,
-            skip: neo4j.int(skip),
-            limit: neo4j.int(limit),
-          });
-          console.log(
-            "Cypher result:",
-            JSON.stringify(result.records, null, 2)
-          );
-
-          const documents = result.records[0].get("documents");
-          const totalCount = result.records[0].get("totalCount");
-
-          return {
-            documents: documents.map((doc) => doc.properties),
-            totalCount: totalCount.low,
-          };
-        } finally {
-          await session.close();
-        }
-      },
-      searchDocumentsWithAuth: async (
-        _source,
-        { searchTerm, page, limit },
         { driver, jwt }
       ) => {
         console.log("searchTerm:", searchTerm, page, limit);
@@ -239,13 +192,15 @@ const neoSchema = new Neo4jGraphQL({
           `;
 
           console.log("Cypher query:", cypherSearch);
-          const result = await session.run(cypherSearch, {
+          const searchParams = {
             searchTerm,
             skip: neo4j.int(skip),
             limit: neo4j.int(limit),
             userId: jwt ? jwt.sub : null,
-            isAdmin: jwt ? jwt.roles.includes('ADMIN') : false
-          });
+            isAdmin: jwt ? jwt.roles.includes("ADMIN") : false,
+          };
+          console.log("Search params:", searchParams);
+          const result = await session.run(cypherSearch, searchParams);
 
           const documents = result.records[0].get("documents");
           const totalCount = result.records[0].get("totalCount");
