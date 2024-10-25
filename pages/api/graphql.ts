@@ -74,7 +74,39 @@ const typeDefs = gql`
   }
 
   extend type Document
-    @authentication(operations: [CREATE, UPDATE, DELETE])
+    @authentication(
+      operations: [
+        CREATE
+        UPDATE
+        DELETE
+        CREATE_RELATIONSHIP
+        DELETE_RELATIONSHIP
+      ]
+    )
+    @authorization(
+      validate: [
+        {
+          operations: [
+            CREATE
+            UPDATE
+            DELETE
+            CREATE_RELATIONSHIP
+            DELETE_RELATIONSHIP
+          ]
+          where: { node: { creator: { id: "$jwt.sub" } } }
+        }
+        {
+          operations: [
+            CREATE
+            UPDATE
+            DELETE
+            CREATE_RELATIONSHIP
+            DELETE_RELATIONSHIP
+          ]
+          where: { jwt: { roles_INCLUDES: "admin" } }
+        }
+      ]
+    )
     @authorization(
       filter: [
         {
