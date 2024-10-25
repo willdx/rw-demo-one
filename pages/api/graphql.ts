@@ -59,6 +59,7 @@ const typeDefs = gql`
     errorMessage: String
     createdAt: DateTime! @timestamp(operations: [CREATE])
     updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+    publishedAt: DateTime
     deletedAt: DateTime
     isPublished: Boolean! @default(value: false)
     children: [Document!]!
@@ -106,13 +107,11 @@ const typeDefs = gql`
           where: { jwt: { roles_INCLUDES: "admin" } }
         }
       ]
-    )
-    @authorization(
       filter: [
         {
           operations: [READ, AGGREGATE]
           requireAuthentication: false
-          where: { node: { isPublished: true } }
+          where: { node: { publishedAt_GT: "1970-01-01T00:00:00.000Z" } }
         }
         { where: { node: { creator: { id: "$jwt.sub" } } } }
         { where: { jwt: { roles_INCLUDES: "admin" } } }

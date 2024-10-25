@@ -37,13 +37,10 @@ export const useDocuments = (token: string | null) => {
   const isLoading = searchTerm ? searchLoading : publishedLoading;
 
   const documents = useMemo(() => {
-    return (
-      currentData?.documentsConnection.edges.map((edge) => edge.node) || []
-    );
+    return currentData?.documentsConnection.edges.map((edge) => edge.node) || [];
   }, [currentData]);
 
-  const hasNextPage =
-    currentData?.documentsConnection.pageInfo.hasNextPage || false;
+  const hasNextPage = currentData?.documentsConnection.pageInfo.hasNextPage || false;
 
   const loadMore = useCallback(() => {
     if (hasNextPage && currentData) {

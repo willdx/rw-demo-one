@@ -33,16 +33,13 @@ export const UPDATE_DOCUMENT_CONTENT = gql`
 export const GET_PUBLISHED_DOCUMENTS = gql`
   query getPublishedDocuments($first: Int, $after: String) {
     documentsConnection(
-      where: { isPublished: true }
-      sort: [{ updatedAt: DESC }]
+      where: { publishedAt_GT: "1970-01-01T00:00:00.000Z" }
+      sort: [{ publishedAt: DESC }]
       first: $first
       after: $after
     ) {
-      totalCount
       pageInfo {
         hasNextPage
-        hasPreviousPage
-        startCursor
         endCursor
       }
       edges {
@@ -50,10 +47,11 @@ export const GET_PUBLISHED_DOCUMENTS = gql`
           id
           fileName
           content
-          status
           isPublished
+          publishedAt
           creator {
             id
+            username
           }
         }
       }
@@ -70,7 +68,11 @@ export const SEARCH_DOCUMENTS = gql`
     $creatorId: ID
   ) {
     documentsConnection(
-      where: { content_CONTAINS: $searchTerm, creator: { id: $creatorId } }
+      where: {
+        content_CONTAINS: $searchTerm
+        creator: { id: $creatorId }
+        publishedAt_GT: "1970-01-01T00:00:00.000Z"
+      }
       sort: [{ updatedAt: DESC }]
       first: $first
       after: $after

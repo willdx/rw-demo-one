@@ -347,7 +347,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         showToast("节点添加成功", "success");
       } catch (error) {
         console.error("添加节点失败:", error);
-        showToast("添加节点失败，请重���", "error");
+        showToast("添加节点失败，请重试", "error");
       }
     },
     [createSubDocument, refetch, setSelectedNode, showToast, user]
@@ -480,9 +480,13 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
           variables: {
             id: nodeId,
             isPublished: publishState,
+            publishedAt: publishState ? new Date().toISOString() : null, // 添加这个字段
           },
         });
-        showToast("发布状态更新成功", "success");
+        showToast(
+          publishState ? "文档发布成功" : "文档取消发布成功",
+          "success"
+        );
         refetch();
       } catch (error) {
         console.error("更新发布状态失败:", error);

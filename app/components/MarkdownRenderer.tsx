@@ -8,9 +8,12 @@ import { oneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import "katex/dist/katex.min.css";
 import { useDocumentContext } from "../contexts/DocumentContext";
 
-const MarkdownRenderer: React.FC<{}> = () => {
+const MarkdownRenderer: React.FC<{ content: string | undefined }> = ({
+  content,
+}) => {
   const { selectedNode } = useDocumentContext();
   console.log("selectedNode:", selectedNode);
+  console.log("content:", content);
 
   return (
     <div className="h-full p-4 overflow-auto grid place-items-center">
@@ -76,7 +79,9 @@ const MarkdownRenderer: React.FC<{}> = () => {
             },
           }}
         >
-          {selectedNode?.selectedChapter
+          {content
+            ? content
+            : selectedNode?.selectedChapter
             ? selectedNode.selectedChapter?.data?.content
             : selectedNode?.content}
         </ReactMarkdown>

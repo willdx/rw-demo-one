@@ -26,7 +26,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
       setShowSkeleton(true);
       timer = setTimeout(() => {
         setShowSkeleton(false);
-      }, 500); // 设置最小加载时间为500毫秒
+      }, 200); // 设置最小加载时间为200毫秒
     } else {
       setShowSkeleton(false);
     }
