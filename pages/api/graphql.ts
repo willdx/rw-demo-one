@@ -13,6 +13,15 @@ import jwt from "jsonwebtoken";
 import { NextApiRequest, NextApiResponse } from "next";
 import axios from "axios";
 
+// 在文件开头添加类型定义
+interface JwtPayload {
+  sub: string;
+  rootId: string | null;
+  roles: string[];
+  iat?: number;
+  exp?: number;
+}
+
 const typeDefs = gql`
   type User {
     id: ID! @id
@@ -257,7 +266,6 @@ const neoSchema = new Neo4jGraphQL({
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // 查找普通用户角色
         const [userRole] = await Role.find({
           where: { name: "USER" },
         });
@@ -281,25 +289,70 @@ const neoSchema = new Neo4jGraphQL({
 
         const newUser = users[0];
 
-        // 创建用户根文档
         const { documents } = await Document.create({
           input: [
             {
               fileName: newUser.username || "me",
-              content: `# 欢迎使用我们的系统！\n\n 
-              请在这里开始你的知识记录吧！\n\n 你可以使用 Markdown 语法来记录你的知识。\n\n
-              你可以点击左侧的节点右键弹出右键菜单来控制子节点`,
+              content: `\# 欢迎使用读写
+
+我们使用思维导图来管理知识的结构，使用markdown语法来编辑内容。
+
+在开始使用读写之前，请先阅读以下共识：
+
+1.笔记不是记录一次就不管了，需要反复修改。
+
+2.笔记写的不是越细越好，而是越简单越好。
+
+3.我们不做分类, 实体识别能很好的做这件事，交给大模型去做。
+
+## 使用方式
+
+我们默认创建两个子节点一个是projects（用来管理项目笔记），一个是cards（用于存储积累下来的相对成熟的卡片笔记）。在推进项目的过程中抽象可复用的知识卡片，知识卡片的复用又加快项目的进程，促进知识的正循环。
+
+我们可以在项目笔记中将任意一个节点转为复用卡片，也可以直接在cards中创建复用卡片。我们建议一个节点，只做一��事情，方便复用。
+              `,
               isPublished: false,
               creator: {
                 connect: { where: { node: { id: newUser.id } } },
+              },
+              children: {
+                create: [
+                  {
+                    edge: {
+                      order: 1000,
+                    },
+                    node: {
+                      fileName: "projects",
+                      content:
+                        "# 使用立项的方式来管理笔记， 重行动，轻分类\n\n请点击projects节点->右键->添加子节点,创建新的项目",
+                      isPublished: false,
+                      creator: {
+                        connect: { where: { node: { id: newUser.id } } },
+                      },
+                    },
+                  },
+                  {
+                    edge: {
+                      order: 1000,
+                    },
+                    node: {
+                      fileName: "cards",
+                      content:
+                        "# 这里是可重用的卡片\n\n请点击cards节点->右键->添加子节点,创建新的可重用的知识卡片",
+                      isPublished: false,
+                      creator: {
+                        connect: { where: { node: { id: newUser.id } } },
+                      },
+                    },
+                  },
+                ],
               },
             },
           ],
         });
 
         const rootDocument = documents[0];
-
-        const token = generateJwtToken(newUser, rootDocument.id);
+        const token = generateJwtToken(newUser, rootDocument.id, [userRole]);
 
         return {
           token,
@@ -481,43 +534,45 @@ const createApolloServer = async () => {
 
 export default startServerAndCreateNextHandler(await createApolloServer(), {
   context: async (req: NextApiRequest, res: NextApiResponse) => {
-    // 解析 JWT Token 并将用户信息传入 context
     const token = req.headers.authorization || "";
     let currentUser = null;
-    let decodedToken = null;
+    let decodedToken: JwtPayload | null = null;
 
     if (token) {
       try {
-        // 解码 JWT Token 获取用户信息
         decodedToken = jwt.verify(
           token.replace("Bearer ", ""),
           process.env.JWT_SECRET!
-        ) as { sub: string; root_id: string | null };
+        ) as JwtPayload;
+
         const [user] = await User.find({ where: { id: decodedToken.sub } });
         currentUser = user;
       } catch (err) {
-        console.error("无效或过期的令牌", err);
+        console.error("无效或过���的令牌", err);
       }
     }
-    // console.log("当前用户:", currentUser);
-    // console.log("token:", token);
-    // console.log("jwt:", decodedToken);
+
     return {
       req,
       res,
       currentUser,
       token,
       jwt: decodedToken,
-      driver, // 添加这一行，确保 driver 被传到 context 中
+      driver,
     };
   },
 });
-function generateJwtToken(user: any, rootId: any) {
+
+function generateJwtToken(
+  user: { id: string },
+  rootId: string,
+  userRoles: { name: string }[] = [{ name: "USER" }]
+): string {
   return jwt.sign(
     {
       sub: user.id,
       rootId: rootId,
-      roles: user.roles.map((role) => role.name),
+      roles: userRoles.map((role) => role.name),
     },
     process.env.JWT_SECRET!,
     {

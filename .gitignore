@@ -40,3 +40,4 @@ next-env.d.ts
 generated-schema.graphql
 docs
 logs
+md/
