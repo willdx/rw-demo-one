@@ -219,11 +219,12 @@ const neoSchema = new Neo4jGraphQL({
         const session = driver.session();
         try {
           const skip = (page - 1) * limit;
+          // 目前仅支持搜索自己的文档
           const cypherSearch = `
             CALL db.index.fulltext.queryNodes('documentsContentIndex', $searchTerm)
             YIELD node, score
-            WHERE node:Document
-            AND (node.isPublished = true OR $userId IS NOT NULL AND node.creator.id = $userId OR $isAdmin = true)
+            MATCH (creator:User)-[:CREATED]->(node:Document)
+            WHERE creator.id = $userId
             WITH node, score
             ORDER BY score DESC
             SKIP $skip
@@ -309,7 +310,7 @@ const neoSchema = new Neo4jGraphQL({
 
 我们默认创建两个子节点一个是projects（用来管理项目笔记），一个是cards（用于存储积累下来的相对成熟的卡片笔记）。在推进项目的过程中抽象可复用的知识卡片，知识卡片的复用又加快项目的进程，促进知识的正循环。
 
-我们可以在项目笔记中将任意一个节点转为复用卡片，也可以直接在cards中创建复用卡片。我们建议一个节点，只做一��事情，方便复用。
+我们可以在项目笔记中将任意一个节点转为复用卡片，也可以直接在cards中创建复用卡片。我们建议一个节点，只做一件事情，方便复用。
               `,
               isPublished: false,
               creator: {
@@ -548,7 +549,7 @@ export default startServerAndCreateNextHandler(await createApolloServer(), {
         const [user] = await User.find({ where: { id: decodedToken.sub } });
         currentUser = user;
       } catch (err) {
-        console.error("无效或过���的令牌", err);
+        console.error("无效或过期的令牌", err);
       }
     }
 

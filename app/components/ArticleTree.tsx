@@ -39,6 +39,7 @@ import {
   CREATE_SUB_DOCUMENT,
   DELETE_DOCUMENTS_AND_CHILDREN,
   UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED,
+  CONNECT_DOCUMENT_NODES,
 } from "../graphql/mutations";
 import { useDocumentContext } from "../contexts/DocumentContext";
 import { useParams, useRouter } from "next/navigation";
@@ -49,6 +50,7 @@ import TreeSkeleton from "./TreeSkeleton";
 import { nodeTypes } from "../utils/constant";
 import ConfirmDialog from "./ConfirmDialog";
 import { ListBulletIcon } from "@heroicons/react/24/outline";
+import ConnectNodeModal from "./ConnectNodeModal";
 
 interface DocumentTreeProps {
   mode: "read" | "write";
@@ -85,6 +87,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const [updateDocumentIsPublished] = useMutation(
     UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
   );
+  const [connectDocumentNodes] = useMutation(CONNECT_DOCUMENT_NODES);
 
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
@@ -496,6 +499,92 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     [updateDocumentIsPublished, showToast, refetch]
   );
 
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
+
+  const handleShowConnectModal = (nodeId: string) => {
+    setConnectSourceId(nodeId);
+    setIsConnectModalOpen(true);
+    closeContextMenu();
+  };
+
+  const handleConnectNode = async (targetId: string) => {
+    if (!connectSourceId) return;
+
+    try {
+      await connectDocumentNodes({
+        variables: {
+          sourceId: connectSourceId,
+          targetId,
+        },
+      });
+      showToast("节点连接成功", "success");
+      refetch();
+    } catch (error) {
+      console.error("连接节点失败:", error);
+      showToast("连接节点失败，请重试", "error");
+    }
+    setIsConnectModalOpen(false);
+  };
+
+  const handleContextMenu = useCallback(() => {
+    if (contextMenu) {
+      return (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={closeContextMenu}
+        >
+          <Link
+            href={`/${mode}/${contextMenu.nodeId}`}
+            onClick={closeContextMenu}
+          >
+            从当前节点打开
+          </Link>
+          {mode === "write" && (
+            <>
+              <a onClick={handleAddChildNode}>添加子节点</a>
+              <a onClick={handleAddSiblingNode}>添加同级节点</a>
+              <a onClick={handleDeleteNodeFromMenu}>删除节点</a>
+              <a
+                onClick={openGenerateGraphDialog}
+                className={`${
+                  generatingGraph ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                data-tip={generatingGraph ? "正在生成知识图谱" : "生成知识图谱"}
+              >
+                生成知识图谱
+              </a>
+              <a
+                onClick={() => {
+                  console.log("#handlePublishToggle...");
+                  console.log("selectedNode:", selectedNode);
+                  console.log(
+                    "selectedNode?.isPublished:",
+                    selectedNode?.isPublished
+                  );
+                  if (selectedNode) {
+                    handlePublishToggle(
+                      selectedNode?.id,
+                      selectedNode?.isPublished ? false : true
+                    );
+                  }
+                  closeContextMenu();
+                }}
+              >
+                {selectedNode?.isPublished ? "取消发布" : "发布文档"}
+              </a>
+              <a onClick={() => handleShowConnectModal(contextMenu.nodeId)}>
+                连接可重用节点
+              </a>
+            </>
+          )}
+        </ContextMenu>
+      );
+    }
+    return null;
+  }, [contextMenu, mode]);
+
   useEffect(() => {
     const handleClickOutside = () => closeContextMenu();
     document.addEventListener("click", handleClickOutside);
@@ -562,56 +651,13 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
           color="#e0e0e0"
         />
       </ReactFlow>
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={closeContextMenu}
-        >
-          <Link
-            href={`/${mode}/${contextMenu.nodeId}`}
-            onClick={closeContextMenu}
-          >
-            从当前节点打开
-          </Link>
-          {mode === "write" && (
-            <>
-              <a onClick={handleAddChildNode}>添加子节点</a>
-              <a onClick={handleAddSiblingNode}>添加同级节点</a>
-              <a onClick={handleDeleteNodeFromMenu}>删除节点</a>
-              <a
-                onClick={openGenerateGraphDialog}
-                className={`${
-                  generatingGraph ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-                data-tip={generatingGraph ? "正在生成知识图谱" : "生成知识图谱"}
-              >
-                生成知识图谱
-              </a>
-              <a
-                onClick={() => {
-                  console.log("#handlePublishToggle...");
-                  console.log("selectedNode:", selectedNode);
-                  console.log(
-                    "selectedNode?.isPublished:",
-                    selectedNode?.isPublished
-                  );
-                  if (selectedNode) {
-                    handlePublishToggle(
-                      selectedNode?.id,
-                      selectedNode?.isPublished ? false : true
-                    );
-                  }
-                  closeContextMenu();
-                }}
-              >
-                {selectedNode?.isPublished ? "取消发布" : "发布文档"}
-              </a>
-            </>
-          )}
-        </ContextMenu>
-      )}
-
+      {handleContextMenu()}
+      <ConnectNodeModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onConnect={handleConnectNode}
+        mode={mode}
+      />
       <ConfirmDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}

@@ -116,3 +116,20 @@ export const AI_CHAT = gql`
     }
   }
 `;
+
+export const CONNECT_DOCUMENT_NODES = gql`
+  mutation ConnectDocumentNodes($sourceId: ID!, $targetId: ID!) {
+    updateDocuments(
+      where: { id: $sourceId }
+      connect: {
+        children: { where: { node: { id: $targetId } } }
+      }
+    ) {
+      documents {
+        id
+        fileName
+        content
+      }
+    }
+  }
+`;

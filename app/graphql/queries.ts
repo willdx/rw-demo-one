@@ -68,11 +68,7 @@ export const SEARCH_DOCUMENTS = gql`
     $creatorId: ID
   ) {
     documentsConnection(
-      where: {
-        content_CONTAINS: $searchTerm
-        creator: { id: $creatorId }
-        publishedAt_GT: "1970-01-01T00:00:00.000Z"
-      }
+      where: { content_CONTAINS: $searchTerm, creator: { id: $creatorId } }
       sort: [{ updatedAt: DESC }]
       first: $first
       after: $after
@@ -158,6 +154,25 @@ export const createGetDocumentsQuery = (maxDepth: number) => gql`
     documents(where: $where) {
       ...DocumentFields
       ${generateChildrenConnection(maxDepth - 1)}
+    }
+  }
+`;
+
+// 添加新的查询用于搜索可复用节点
+export const SEARCH_REUSABLE_DOCUMENTS = gql`
+  query searchReusableDocuments(
+    $searchTerm: String!
+    $page: Int!
+    $limit: Int!
+  ) {
+    searchDocuments(searchTerm: $searchTerm, page: $page, limit: $limit) {
+      documents {
+        id
+        fileName
+        content
+        updatedAt
+      }
+      totalCount
     }
   }
 `;
