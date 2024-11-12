@@ -40,6 +40,7 @@ import {
   DELETE_DOCUMENTS_AND_CHILDREN,
   UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED,
   CONNECT_DOCUMENT_NODES,
+  DISCONNECT_DOCUMENT_NODES,
 } from "../graphql/mutations";
 import { useDocumentContext } from "../contexts/DocumentContext";
 import { useParams, useRouter } from "next/navigation";
@@ -51,6 +52,7 @@ import { nodeTypes } from "../utils/constant";
 import ConfirmDialog from "./ConfirmDialog";
 import { ListBulletIcon } from "@heroicons/react/24/outline";
 import ConnectNodeModal from "./ConnectNodeModal";
+import DisconnectNodeModal from "./DisconnectNodeModal";
 
 interface DocumentTreeProps {
   mode: "read" | "write";
@@ -88,6 +90,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED
   );
   const [connectDocumentNodes] = useMutation(CONNECT_DOCUMENT_NODES);
+  const [disconnectDocumentNodes] = useMutation(DISCONNECT_DOCUMENT_NODES);
 
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
@@ -527,6 +530,41 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     setIsConnectModalOpen(false);
   };
 
+  const [isDisconnectModalOpen, setIsDisconnectModalOpen] = useState(false);
+  const [disconnectSourceId, setDisconnectSourceId] = useState<string | null>(
+    null
+  );
+
+  const handleShowDisconnectModal = (nodeId: string) => {
+    setDisconnectSourceId(nodeId);
+    setIsDisconnectModalOpen(true);
+    closeContextMenu();
+  };
+
+  const handleDisconnectNodes = async (targetIds: string[]) => {
+    if (!disconnectSourceId || targetIds.length === 0) return;
+
+    try {
+      // 使用 Promise.all 并行处理多个取消引用操作
+      await Promise.all(
+        targetIds.map((targetId) =>
+          disconnectDocumentNodes({
+            variables: {
+              sourceId: disconnectSourceId,
+              targetId,
+            },
+          })
+        )
+      );
+      showToast("取消引用成功", "success");
+      refetch();
+    } catch (error) {
+      console.error("取消引用失败:", error);
+      showToast("取消引用失败，请重试", "error");
+    }
+    setIsDisconnectModalOpen(false);
+  };
+
   const handleContextMenu = useCallback(() => {
     if (contextMenu) {
       return (
@@ -575,7 +613,10 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
                 {selectedNode?.isPublished ? "取消发布" : "发布文档"}
               </a>
               <a onClick={() => handleShowConnectModal(contextMenu.nodeId)}>
-                连接可重用节点
+                引用卡片
+              </a>
+              <a onClick={() => handleShowDisconnectModal(contextMenu.nodeId)}>
+                取消引用卡片
               </a>
             </>
           )}
@@ -656,6 +697,13 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         isOpen={isConnectModalOpen}
         onClose={() => setIsConnectModalOpen(false)}
         onConnect={handleConnectNode}
+        mode={mode}
+      />
+      <DisconnectNodeModal
+        isOpen={isDisconnectModalOpen}
+        onClose={() => setIsDisconnectModalOpen(false)}
+        onDisconnect={handleDisconnectNodes}
+        nodeId={disconnectSourceId || ""}
         mode={mode}
       />
       <ConfirmDialog

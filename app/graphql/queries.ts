@@ -165,8 +165,26 @@ export const SEARCH_REUSABLE_DOCUMENTS = gql`
     $page: Int!
     $limit: Int!
   ) {
-    searchDocuments(searchTerm: $searchTerm, page: $page, limit: $limit) {
+    searchReusableDocuments(
+      searchTerm: $searchTerm
+      page: $page
+      limit: $limit
+    ) {
       documents {
+        id
+        fileName
+        content
+        updatedAt
+      }
+      totalCount
+    }
+  }
+`;
+
+export const GET_NODE_REFERENCES = gql`
+  query getNodeReferences($nodeId: ID!, $page: Int!, $limit: Int!) {
+    getNodeReferences(nodeId: $nodeId, page: $page, limit: $limit) {
+      references {
         id
         fileName
         content

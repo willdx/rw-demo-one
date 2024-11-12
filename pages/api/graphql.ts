@@ -54,6 +54,7 @@ const typeDefs = gql`
     fileName: String!
     content: String!
     fileSize: Int @default(value: 0)
+    # isReusable: Boolean! @default(value: false)
     fileSource: String @default(value: "local file")
     fileType: String @default(value: "md")
     is_cancelled: Boolean @default(value: false)
@@ -177,15 +178,21 @@ const typeDefs = gql`
   }
 
   type Query {
-    searchDocuments(
+    searchReusableDocuments(
       searchTerm: String!
       page: Int = 1
       limit: Int = 10
     ): DocumentSearchResult!
+    getNodeReferences(nodeId: ID!, page: Int!, limit: Int!): NodeReferencesResult!
   }
 
   type DocumentSearchResult {
     documents: [Document!]!
+    totalCount: Int!
+  }
+
+  type NodeReferencesResult {
+    references: [Document!]!
     totalCount: Int!
   }
 `;
@@ -210,7 +217,7 @@ const neoSchema = new Neo4jGraphQL({
   driver,
   resolvers: {
     Query: {
-      searchDocuments: async (
+      searchReusableDocuments: async (
         _source,
         { searchTerm, page, limit },
         { driver, jwt }
@@ -220,10 +227,13 @@ const neoSchema = new Neo4jGraphQL({
         try {
           const skip = (page - 1) * limit;
           // 目前仅支持搜索自己的文档
+          // 定义cards节点下的节点就是可重用的节点，暂时不使用重用卡片字段标记节点是否可重用
           const cypherSearch = `
             CALL db.index.fulltext.queryNodes('documentsContentIndex', $searchTerm)
             YIELD node, score
             MATCH (creator:User)-[:CREATED]->(node:Document)
+            MATCH (root:Document)-[:HAS_CHILD*]->(cards:Document {fileName: "cards"})
+            MATCH (cards)-[:HAS_CHILD*]->(node)
             WHERE creator.id = $userId
             WITH node, score
             ORDER BY score DESC
@@ -254,6 +264,33 @@ const neoSchema = new Neo4jGraphQL({
           await session.close();
         }
       },
+      getNodeReferences: async (_source, { nodeId, page, limit }, { driver }) => {
+        const session = driver.session();
+        try {
+          const skip = (page - 1) * limit;
+          const cypherQuery = `
+            MATCH (current:Document {id: $nodeId})-[:HAS_CHILD]->(child:Document)
+            MATCH (root:Document)-[:HAS_CHILD*]->(cards:Document {fileName: "cards"})-[:HAS_CHILD*]->(child)
+            WITH child
+            SKIP $skip
+            LIMIT $limit
+            RETURN collect(child) as references, count(child) as totalCount
+          `;
+
+          const result = await session.run(cypherQuery, { 
+            nodeId,
+            skip: neo4j.int(skip),
+            limit: neo4j.int(limit)
+          });
+
+          return {
+            references: result.records[0].get('references').map((ref: any) => ref.properties),
+            totalCount: result.records[0].get('totalCount').low
+          };
+        } finally {
+          await session.close();
+        }
+      }
     },
     Mutation: {
       signUp: async (_source, { username, email, password }) => {

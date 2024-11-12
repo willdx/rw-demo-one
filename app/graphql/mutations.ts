@@ -8,10 +8,7 @@ export const UPDATE_PUBLISH_DOCUMENT_IS_PUBLISHED = gql`
   ) {
     updateDocuments(
       where: { id: $id }
-      update: { 
-        isPublished: $isPublished
-        publishedAt: $publishedAt 
-      }
+      update: { isPublished: $isPublished, publishedAt: $publishedAt }
     ) {
       documents {
         id
@@ -121,9 +118,22 @@ export const CONNECT_DOCUMENT_NODES = gql`
   mutation ConnectDocumentNodes($sourceId: ID!, $targetId: ID!) {
     updateDocuments(
       where: { id: $sourceId }
-      connect: {
-        children: { where: { node: { id: $targetId } } }
+      connect: { children: { where: { node: { id: $targetId } } } }
+    ) {
+      documents {
+        id
+        fileName
+        content
       }
+    }
+  }
+`;
+
+export const DISCONNECT_DOCUMENT_NODES = gql`
+  mutation DisconnectDocumentNodes($sourceId: ID!, $targetId: ID!) {
+    updateDocuments(
+      where: { id: $sourceId }
+      disconnect: { children: { where: { node: { id: $targetId } } } }
     ) {
       documents {
         id

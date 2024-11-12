@@ -48,10 +48,10 @@ const ConnectNodeModal: React.FC<ConnectNodeModalProps> = ({
       return <div className="loading loading-spinner loading-md"></div>;
     if (error)
       return <div className="text-error">搜索出错: {error.message}</div>;
-    if (!data?.searchDocuments?.documents?.length)
+    if (!data?.searchReusableDocuments?.documents?.length)
       return <div className="text-gray-500">无搜索结果</div>;
 
-    return data.searchDocuments.documents.map((doc: any) => (
+    return data.searchReusableDocuments.documents.map((doc: any) => (
       <div key={doc.id} className="card bg-base-200 shadow-sm mb-2">
         <div className="card-body p-4">
           <h3 className="card-title text-base">{doc.fileName}</h3>
