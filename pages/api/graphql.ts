@@ -132,6 +132,11 @@ const typeDefs = gql`
     order: Float
   }
 
+  type ChangeParentResult {
+    success: Boolean!
+    message: String!
+  }
+
   type Mutation {
     signUp(email: String!, password: String!, username: String!): AuthPayload!
     signIn(email: String!, password: String!): AuthPayload!
@@ -139,6 +144,11 @@ const typeDefs = gql`
     deleteDocumentsAndChildren(id: ID!): Boolean!
     generateKnowledgeGraph(documentId: ID!): KnowledgeGraphResult!
     aiChat(message: String!): AiChatResponse!
+    changeDocumentParent(
+      nodeId: ID!
+      oldParentIds: [ID!]
+      newParentId: ID
+    ): ChangeParentResult!
   }
 
   type AuthPayload {
@@ -184,6 +194,7 @@ const typeDefs = gql`
       limit: Int = 10
     ): DocumentSearchResult!
     getNodeReferences(nodeId: ID!, page: Int!, limit: Int!): NodeReferencesResult!
+    getNodeParents(nodeId: ID!, page: Int!, limit: Int!): NodeParentsResult!
   }
 
   type DocumentSearchResult {
@@ -193,6 +204,11 @@ const typeDefs = gql`
 
   type NodeReferencesResult {
     references: [Document!]!
+    totalCount: Int!
+  }
+
+  type NodeParentsResult {
+    parents: [Document!]!
     totalCount: Int!
   }
 `;
@@ -290,7 +306,33 @@ const neoSchema = new Neo4jGraphQL({
         } finally {
           await session.close();
         }
-      }
+      },
+      getNodeParents: async (_source, { nodeId, page, limit }, { driver }) => {
+        const session = driver.session();
+        try {
+          const skip = (page - 1) * limit;
+          const result = await session.run(
+            `
+            MATCH (node:Document {id: $nodeId})<-[r:HAS_CHILD]-(parent:Document)
+            WITH parent
+            ORDER BY parent.fileName ASC, parent.updatedAt DESC
+            WITH collect(parent) as parents, count(parent) as total
+            RETURN parents[${skip}..${skip + limit}] as parents, total
+            `,
+            { nodeId }
+          );
+
+          const parents = result.records[0].get('parents') || [];
+          const totalCount = result.records[0].get('total').low;
+
+          return {
+            parents: parents.map((parent: any) => parent.properties),
+            totalCount
+          };
+        } finally {
+          await session.close();
+        }
+      },
     },
     Mutation: {
       signUp: async (_source, { username, email, password }) => {
@@ -548,6 +590,59 @@ const neoSchema = new Neo4jGraphQL({
         } catch (error) {
           console.error("AI 聊天错误:", error);
           throw new Error("法处理您的请求，请稍后再试");
+        }
+      },
+
+      changeDocumentParent: async (_source, { nodeId, oldParentIds, newParentId }, { driver }) => {
+        const session = driver.session();
+        try {
+          if (oldParentIds && oldParentIds.length > 0) {
+            // 一次性断开所有选中的父节点关系
+            await session.run(
+              `
+              MATCH (child:Document {id: $nodeId})<-[r:HAS_CHILD]-(parent:Document)
+              WHERE parent.id IN $oldParentIds
+              DELETE r
+              `,
+              { nodeId, oldParentIds }
+            );
+          }
+
+          if (newParentId) {
+            // 检查是否已存在关系
+            const existingRelation = await session.run(
+              `
+              MATCH (child:Document {id: $nodeId})<-[r:HAS_CHILD]-(parent:Document {id: $newParentId})
+              RETURN r
+              `,
+              { nodeId, newParentId }
+            );
+
+            if (existingRelation.records.length === 0) {
+              // 建立与新父节点的关系
+              await session.run(
+                `
+                MATCH (child:Document {id: $nodeId})
+                MATCH (parent:Document {id: $newParentId})
+                CREATE (parent)-[r:HAS_CHILD {order: 1000}]->(child)
+                `,
+                { nodeId, newParentId }
+              );
+            }
+          }
+
+          return {
+            success: true,
+            message: "父节点关系更新成功"
+          };
+        } catch (error) {
+          console.error("更新父节点关系失败:", error);
+          return {
+            success: false,
+            message: "更新父节点关系失败"
+          };
+        } finally {
+          await session.close();
         }
       },
     },

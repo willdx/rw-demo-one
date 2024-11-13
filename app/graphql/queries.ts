@@ -194,3 +194,18 @@ export const GET_NODE_REFERENCES = gql`
     }
   }
 `;
+
+export const GET_NODE_PARENTS = gql`
+  query GetNodeParents($nodeId: ID!, $page: Int!, $limit: Int!) {
+    getNodeParents(nodeId: $nodeId, page: $page, limit: $limit) {
+      parents {
+        id
+        fileName
+        content
+        updatedAt
+        isPublished
+      }
+      totalCount
+    }
+  }
+`;

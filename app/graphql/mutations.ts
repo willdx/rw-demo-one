@@ -72,20 +72,16 @@ export const DELETE_DOCUMENTS_AND_CHILDREN = gql`
 export const CHANGE_DOCUMENT_PARENT = gql`
   mutation ChangeDocumentParent(
     $nodeId: ID!
-    $oldParentId: ID!
-    $newParentId: ID!
+    $oldParentIds: [ID!]
+    $newParentId: ID
   ) {
-    updateDocuments(
-      where: { id: $nodeId }
-      disconnect: { parent: { where: { node: { id: $oldParentId } } } }
-      connect: { parent: { where: { node: { id: $newParentId } } } }
+    changeDocumentParent(
+      nodeId: $nodeId
+      oldParentIds: $oldParentIds
+      newParentId: $newParentId
     ) {
-      documents {
-        id
-        fileName
-        content
-        isPublished
-      }
+      success
+      message
     }
   }
 `;

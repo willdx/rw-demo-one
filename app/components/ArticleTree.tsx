@@ -53,6 +53,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import { ListBulletIcon } from "@heroicons/react/24/outline";
 import ConnectNodeModal from "./ConnectNodeModal";
 import DisconnectNodeModal from "./DisconnectNodeModal";
+import SelectParentsModal from "./SelectParentsModal";
 
 interface DocumentTreeProps {
   mode: "read" | "write";
@@ -73,7 +74,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const documentId = params?.id as string;
   const { selectedNode, setSelectedNode } = useDocumentContext();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView, getIntersectingNodes } = useReactFlow();
   const [queryDepth, setQueryDepth] = useState(3);
   const [draggedNode, setDraggedNode] = useState<Node | null>(null);
@@ -280,32 +281,69 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     [draggedNode, getIntersectingNodes, setNodes]
   );
 
-  // 更新 handleNodeMove 函数
+  const [isSelectParentsModalOpen, setIsSelectParentsModalOpen] = useState(false);
+  const [moveTargetId, setMoveTargetId] = useState<string | null>(null);
+
   const handleNodeMove = useCallback(
     async (node: Node, newParentId: string) => {
-      const oldParentId = node?.parent?.id;
-      console.log(`handleNodeMove 被调用node: ${JSON.stringify(node)}`);
-      console.log(`oldParentId: ${oldParentId}, newParentId: ${newParentId}`);
-
-      if (oldParentId === newParentId) {
-        console.log("节点未发生移动");
-        return;
-      }
-
-      try {
-        await changeDocumentParent({
-          variables: { nodeId: node.id, oldParentId, newParentId },
-        });
-
-        showToast("节点位置更新成功", "success");
-        refetch();
-      } catch (error) {
-        console.error("更新节点位置失败:", error);
-        showToast("更新节点位置失败，请重试", "error");
+      /* 
+        获取当前画布展示的节点的父节点数量，而不是数据库真实的父节点数量这样做的好处是
+      */
+      const parentEdges = edges.filter((edge: Edge) => edge.target === node.id);
+      console.log("parentEdges:", parentEdges); // 添加日志
+      
+      if (parentEdges.length > 1) {
+        console.log("节点有多个父节点，打开选择模态框"); // 添加日志
+        // 如果有多个父节点，打开选择模态框
+        setMoveTargetId(newParentId);
+        setIsSelectParentsModalOpen(true);
+      } else {
+        console.log("节点只有一个父节点，直接更新"); // 添加日志
+        // 如果只有一个父节点，直接更新
+        const oldParentId = parentEdges[0]?.source;
+        try {
+          await changeDocumentParent({
+            variables: { 
+              nodeId: node.id, 
+              oldParentIds: oldParentId ? [oldParentId] : [], 
+              newParentId 
+            },
+          });
+          showToast("节点位置更新成功", "success");
+          refetch();
+        } catch (error) {
+          console.error("更新节点位置失败:", error);
+          showToast("更新节点位置失败，请重试", "error");
+        }
       }
     },
-    [changeDocumentParent, showToast, refetch]
+    [changeDocumentParent, showToast, refetch, edges]
   );
+
+  // 处理父节点选择
+  const handleParentsSelect = useCallback(async (selectedParentIds: string[]) => {
+    if (!selectedNode || !moveTargetId) return;
+
+    try {
+      // 一次性断开所有选中的父节点关系并建立新的父节点关系
+      await changeDocumentParent({
+        variables: {
+          nodeId: selectedNode.id,
+          oldParentIds: selectedParentIds,
+          newParentId: moveTargetId,
+        },
+      });
+
+      showToast("节点位置更新成功", "success");
+      refetch();
+    } catch (error) {
+      console.error("更新节点位置失败:", error);
+      showToast("更新节点位置失败，请重试", "error");
+    } finally {
+      setIsSelectParentsModalOpen(false);
+      setMoveTargetId(null);
+    }
+  }, [selectedNode, moveTargetId, changeDocumentParent, showToast, refetch]);
 
   // 更新 onNodeDragStop 处理函数
   const onNodeDragStop = useCallback(
@@ -314,11 +352,11 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
       const intersectingNodes = getIntersectingNodes(node);
       const newParentNode = intersectingNodes.find(
-        (n) => n.id !== node.id && n.id !== node?.parent?.id
+        (n) => n.id !== node.id && n.id !== draggedNode.parentId // 修改这里，使用 parentId 而不是 parent?.id
       );
 
       if (newParentNode) {
-        handleNodeMove(node, newParentNode.id);
+        handleNodeMove(draggedNode, newParentNode.id); // 修改这里，使用 draggedNode 而不是 node
       }
 
       setDraggedNode(null);
@@ -733,6 +771,17 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
           <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
         </div>
       )}
+      <SelectParentsModal
+        isOpen={isSelectParentsModalOpen}
+        onClose={() => {
+          setIsSelectParentsModalOpen(false);
+          setMoveTargetId(null);
+        }}
+        onConfirm={handleParentsSelect}
+        nodeId={selectedNode?.id || ""}
+        mode={mode}
+        newParentId={moveTargetId || ""}
+      />
     </div>
   );
 };
