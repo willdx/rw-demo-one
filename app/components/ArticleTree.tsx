@@ -281,7 +281,8 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
     [draggedNode, getIntersectingNodes, setNodes]
   );
 
-  const [isSelectParentsModalOpen, setIsSelectParentsModalOpen] = useState(false);
+  const [isSelectParentsModalOpen, setIsSelectParentsModalOpen] =
+    useState(false);
   const [moveTargetId, setMoveTargetId] = useState<string | null>(null);
 
   const handleNodeMove = useCallback(
@@ -291,7 +292,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
       */
       const parentEdges = edges.filter((edge: Edge) => edge.target === node.id);
       console.log("parentEdges:", parentEdges); // 添加日志
-      
+
       if (parentEdges.length > 1) {
         console.log("节点有多个父节点，打开选择模态框"); // 添加日志
         // 如果有多个父节点，打开选择模态框
@@ -303,10 +304,10 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         const oldParentId = parentEdges[0]?.source;
         try {
           await changeDocumentParent({
-            variables: { 
-              nodeId: node.id, 
-              oldParentIds: oldParentId ? [oldParentId] : [], 
-              newParentId 
+            variables: {
+              nodeId: node.id,
+              oldParentIds: oldParentId ? [oldParentId] : [],
+              newParentId,
             },
           });
           showToast("节点位置更新成功", "success");
@@ -321,29 +322,32 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   );
 
   // 处理父节点选择
-  const handleParentsSelect = useCallback(async (selectedParentIds: string[]) => {
-    if (!selectedNode || !moveTargetId) return;
+  const handleParentsSelect = useCallback(
+    async (selectedParentIds: string[]) => {
+      if (!selectedNode || !moveTargetId) return;
 
-    try {
-      // 一次性断开所有选中的父节点关系并建立新的父节点关系
-      await changeDocumentParent({
-        variables: {
-          nodeId: selectedNode.id,
-          oldParentIds: selectedParentIds,
-          newParentId: moveTargetId,
-        },
-      });
+      try {
+        // 一次性断开所有选中的父节点关系并建立新的父节点关系
+        await changeDocumentParent({
+          variables: {
+            nodeId: selectedNode.id,
+            oldParentIds: selectedParentIds,
+            newParentId: moveTargetId,
+          },
+        });
 
-      showToast("节点位置更新成功", "success");
-      refetch();
-    } catch (error) {
-      console.error("更新节点位置失败:", error);
-      showToast("更新节点位置失败，请重试", "error");
-    } finally {
-      setIsSelectParentsModalOpen(false);
-      setMoveTargetId(null);
-    }
-  }, [selectedNode, moveTargetId, changeDocumentParent, showToast, refetch]);
+        showToast("节点位置更新成功", "success");
+        refetch();
+      } catch (error) {
+        console.error("更新节点位置失败:", error);
+        showToast("更新节点位置失败，请重试", "error");
+      } finally {
+        setIsSelectParentsModalOpen(false);
+        setMoveTargetId(null);
+      }
+    },
+    [selectedNode, moveTargetId, changeDocumentParent, showToast, refetch]
+  );
 
   // 更新 onNodeDragStop 处理函数
   const onNodeDragStop = useCallback(
@@ -524,9 +528,21 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
           variables: {
             id: nodeId,
             isPublished: publishState,
-            publishedAt: publishState ? new Date().toISOString() : null, // 添加这个字段
+            publishedAt: publishState ? new Date().toISOString() : null,
           },
         });
+
+        // 立即更新 selectedNode 的发布状态
+        setSelectedNode((prevNode) =>
+          prevNode
+            ? {
+                ...prevNode,
+                isPublished: publishState,
+                publishedAt: publishState ? new Date().toISOString() : null,
+              }
+            : null
+        );
+
         showToast(
           publishState ? "文档发布成功" : "文档取消发布成功",
           "success"
@@ -537,7 +553,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         showToast("更新发布状态失败，请重试", "error");
       }
     },
-    [updateDocumentIsPublished, showToast, refetch]
+    [updateDocumentIsPublished, showToast, refetch, setSelectedNode]
   );
 
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
@@ -613,6 +629,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         >
           <Link
             href={`/${mode}/${contextMenu.nodeId}`}
+            target="_blank"
             onClick={closeContextMenu}
           >
             从当前节点打开
