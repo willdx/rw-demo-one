@@ -1,16 +1,19 @@
 # 构建阶段
-FROM node:20-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
 
-# 安装pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 安装git、ssh和pnpm，并配置git使用HTTPS
+RUN apk add --no-cache git openssh && \
+    git config --global url."https://github.com/".insteadOf git@github.com: && \
+    corepack enable && \
+    corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
 # 复制package文件
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
 
-# 安装依赖
-RUN pnpm install --frozen-lockfile
+# 首次安装生成新的 lock 文件
+RUN pnpm install --no-frozen-lockfile
 
 # 复制源代码
 COPY . .
@@ -19,7 +22,7 @@ COPY . .
 RUN pnpm build
 
 # 生产阶段
-FROM node:20-alpine AS runner
+FROM --platform=$TARGETPLATFORM node:20-alpine AS runner
 
 WORKDIR /app
 
@@ -34,7 +37,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.mjs ./
 
 # 安装生产依赖
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod
 
 # 设置环境变量
 ENV NODE_ENV=production

@@ -1,0 +1,25 @@
+{
+    admin :2019
+    email willdx1992@gmail.com
+    debug
+    auto_https off
+}
+
+(cors) {
+    header {
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods *
+        Access-Control-Allow-Headers *
+        Access-Control-Allow-Credentials true
+    }
+}
+
+rw.imdancer.com {
+    reverse_proxy nextjs-app:3000
+    import cors
+}
+
+neo4j.imdancer.com {
+    reverse_proxy neo4j:7474
+    import cors
+}

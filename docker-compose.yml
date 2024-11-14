@@ -1,43 +1,53 @@
-version: '3.8'
-
 services:
-  nextjs-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  caddy-rw:
+    image: caddy:latest
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     ports:
-      - "${PORT:-3000}:3000"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  nextjs-app:
+    image: registry.cn-hangzhou.aliyuncs.com/willdx1992/rw-demo:latest
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     environment:
       - NODE_ENV=${NODE_ENV:-production}
-      - PORT=${PORT:-3000}
       - NEO4J_URI=${NEO4J_URI}
       - NEO4J_USERNAME=${NEO4J_USERNAME}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - NEO4J_DATABASE=${NEO4J_DATABASE}
       - JWT_SECRET=${JWT_SECRET}
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
+      - NEXT_PUBLIC_API_URL=http://rw.imdancer.com
     networks:
       - app-network
+    restart: unless-stopped
     depends_on:
       - neo4j
 
   neo4j:
-    image: registry.cn-hangzhou.aliyuncs.com/public/neo4j:5.11.0
+    image: registry.cn-hangzhou.aliyuncs.com/willdx1992/rw-demo-neo4j-apoc:latest
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_initial_dbms_default__database=${NEO4J_DATABASE}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_server_bolt_enabled=true
+      - NEO4J_server_http_enabled=true
+      - NEO4J_server_default__listen__address=0.0.0.0
     ports:
       - "7687:7687"
       - "7474:7474"
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
     networks:
       - app-network
+    restart: unless-stopped
 
 networks:
   app-network:
@@ -45,4 +55,5 @@ networks:
 
 volumes:
   neo4j_data:
-  neo4j_logs: 
+  neo4j_logs:
+  neo4j_plugins:
