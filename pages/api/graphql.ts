@@ -54,7 +54,6 @@ const typeDefs = gql`
     fileName: String!
     content: String!
     fileSize: Int @default(value: 0)
-    # isReusable: Boolean! @default(value: false)
     fileSource: String @default(value: "local file")
     fileType: String @default(value: "md")
     is_cancelled: Boolean @default(value: false)
@@ -74,7 +73,7 @@ const typeDefs = gql`
     isPublished: Boolean! @default(value: false)
     children: [Document!]!
       @relationship(type: "HAS_CHILD", direction: OUT, properties: "ChildOrder")
-    parent: Document @relationship(type: "HAS_CHILD", direction: IN)
+    parents: [Document!]! @relationship(type: "HAS_CHILD", direction: IN)
     creator: User! @relationship(type: "CREATED", direction: IN)
   }
 

@@ -141,8 +141,9 @@ export const createGetDocumentsQuery = (maxDepth: number) => gql`
     content
     status
     isPublished
-    parent {
+    parents {
       id
+      fileName
     }
   }
 

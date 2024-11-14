@@ -356,11 +356,11 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
       const intersectingNodes = getIntersectingNodes(node);
       const newParentNode = intersectingNodes.find(
-        (n) => n.id !== node.id && n.id !== draggedNode.parentId // 修改这里，使用 parentId 而不是 parent?.id
+        (n) => n.id !== node.id && n.id !== draggedNode.parentId
       );
 
       if (newParentNode) {
-        handleNodeMove(draggedNode, newParentNode.id); // 修改这里，使用 draggedNode 而不是 node
+        handleNodeMove(draggedNode, newParentNode.id);
       }
 
       setDraggedNode(null);
