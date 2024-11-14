@@ -1,0 +1,24 @@
+# 构建缓存和输出
+.next
+node_modules
+out
+
+# 开发文件
+.git
+.gitignore
+.env*
+README.md
+.vscode
+.idea
+
+# 日志文件
+*.log
+npm-debug.log*
+
+# 测试文件
+__tests__
+coverage
+
+# Docker相关
+Dockerfile
+docker-compose.yml 
