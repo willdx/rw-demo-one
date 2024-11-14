@@ -192,7 +192,11 @@ const typeDefs = gql`
       page: Int = 1
       limit: Int = 10
     ): DocumentSearchResult!
-    getNodeReferences(nodeId: ID!, page: Int!, limit: Int!): NodeReferencesResult!
+    getNodeReferences(
+      nodeId: ID!
+      page: Int!
+      limit: Int!
+    ): NodeReferencesResult!
     getNodeParents(nodeId: ID!, page: Int!, limit: Int!): NodeParentsResult!
   }
 
@@ -279,7 +283,11 @@ const neoSchema = new Neo4jGraphQL({
           await session.close();
         }
       },
-      getNodeReferences: async (_source, { nodeId, page, limit }, { driver }) => {
+      getNodeReferences: async (
+        _source,
+        { nodeId, page, limit },
+        { driver }
+      ) => {
         const session = driver.session();
         try {
           const skip = (page - 1) * limit;
@@ -292,15 +300,17 @@ const neoSchema = new Neo4jGraphQL({
             RETURN collect(child) as references, count(child) as totalCount
           `;
 
-          const result = await session.run(cypherQuery, { 
+          const result = await session.run(cypherQuery, {
             nodeId,
             skip: neo4j.int(skip),
-            limit: neo4j.int(limit)
+            limit: neo4j.int(limit),
           });
 
           return {
-            references: result.records[0].get('references').map((ref: any) => ref.properties),
-            totalCount: result.records[0].get('totalCount').low
+            references: result.records[0]
+              .get("references")
+              .map((ref: any) => ref.properties),
+            totalCount: result.records[0].get("totalCount").low,
           };
         } finally {
           await session.close();
@@ -321,12 +331,12 @@ const neoSchema = new Neo4jGraphQL({
             { nodeId }
           );
 
-          const parents = result.records[0].get('parents') || [];
-          const totalCount = result.records[0].get('total').low;
+          const parents = result.records[0].get("parents") || [];
+          const totalCount = result.records[0].get("total").low;
 
           return {
             parents: parents.map((parent: any) => parent.properties),
-            totalCount
+            totalCount,
           };
         } finally {
           await session.close();
@@ -531,7 +541,7 @@ const neoSchema = new Neo4jGraphQL({
           formData.append("uri", process.env.NEO4J_URI || "");
           formData.append("userName", process.env.NEO4J_USERNAME || "");
           formData.append("password", process.env.NEO4J_PASSWORD || "");
-          formData.append("database", process.env.NEO4J_DATEBASE || "");
+          formData.append("database", process.env.NEO4J_DATABASE || "");
           formData.append("port", process.env.NEO4J_PORT || "");
           formData.append("model", "通义千问");
           formData.append("source_type", "db_content");
@@ -567,7 +577,7 @@ const neoSchema = new Neo4jGraphQL({
           formData.append("uri", process.env.NEO4J_URI || "");
           formData.append("userName", process.env.NEO4J_USERNAME || "");
           formData.append("password", process.env.NEO4J_PASSWORD || "");
-          formData.append("database", process.env.NEO4J_DATEBASE || "");
+          formData.append("database", process.env.NEO4J_DATABASE || "");
           formData.append("model", "通义千问");
           formData.append("mode", "graph+vector");
           formData.append("question", message);
@@ -592,7 +602,11 @@ const neoSchema = new Neo4jGraphQL({
         }
       },
 
-      changeDocumentParent: async (_source, { nodeId, oldParentIds, newParentId }, { driver }) => {
+      changeDocumentParent: async (
+        _source,
+        { nodeId, oldParentIds, newParentId },
+        { driver }
+      ) => {
         const session = driver.session();
         try {
           if (oldParentIds && oldParentIds.length > 0) {
@@ -632,13 +646,13 @@ const neoSchema = new Neo4jGraphQL({
 
           return {
             success: true,
-            message: "父节点关系更新成功"
+            message: "父节点关系更新成功",
           };
         } catch (error) {
           console.error("更新父节点关系失败:", error);
           return {
             success: false,
-            message: "更新父节点关系失败"
+            message: "更新父节点关系失败",
           };
         } finally {
           await session.close();
