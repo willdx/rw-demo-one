@@ -27,7 +27,7 @@ services:
       - neo4j
 
   neo4j:
-    image: neo4j:5.11.0
+    image: registry.cn-hangzhou.aliyuncs.com/public/neo4j:5.11.0
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
     ports:
