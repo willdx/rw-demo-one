@@ -247,10 +247,16 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const onNodeDragStart = useCallback(
     (event: React.MouseEvent, node: Node) => {
       setDraggedNode(node);
+      // 添加拖拽开始的视觉效果
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
-          data: { ...n.data, isDragging: n.id === node.id },
+          data: { 
+            ...n.data,
+            isDragging: n.id === node.id,
+            // 重置所有节点的目标状态
+            isPossibleTarget: false 
+          },
         }))
       );
     },
@@ -264,16 +270,20 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
       const intersectingNodes = getIntersectingNodes(node);
       const possibleTargetIds = intersectingNodes
-        .filter((n) => n.id !== node.id && n.id !== node.parentNode)
+        .filter((n) => n.id !== node.id && n.id !== node.parentId)
         .map((n) => n.id);
 
       setPossibleTargets(possibleTargetIds);
+      
+      // 更新可能的目标节点视觉效果
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
           data: {
             ...n.data,
             isPossibleTarget: possibleTargetIds.includes(n.id),
+            // 保持当前拖拽节点的状态
+            isDragging: n.id === draggedNode.id 
           },
         }))
       );
@@ -363,12 +373,17 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         handleNodeMove(draggedNode, newParentNode.id);
       }
 
+      // 重置所有节点的状态
       setDraggedNode(null);
       setPossibleTargets([]);
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
-          data: { ...n.data, isDragging: false, isPossibleTarget: false },
+          data: { 
+            ...n.data, 
+            isDragging: false, 
+            isPossibleTarget: false 
+          },
         }))
       );
     },
