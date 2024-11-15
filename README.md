@@ -82,7 +82,8 @@ nextjs-app:
 ```shell
 docker login --username=willdx1992 registry.cn-hangzhou.aliyuncs.com
 cp .env.example .env.production  # 拷贝配置文件，并修改线上的环境变量
-docker-compose --env-file .env.production up -d  # 重新启动服务
+docker compose --env-file .env.production down
+docker compose --env-file .env.production up
 ```
 
 
