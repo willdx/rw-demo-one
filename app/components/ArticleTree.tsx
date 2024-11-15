@@ -73,7 +73,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
   const params = useParams();
   const documentId = params?.id as string;
   const { selectedNode, setSelectedNode } = useDocumentContext();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView, getIntersectingNodes } = useReactFlow();
   const [queryDepth, setQueryDepth] = useState(3);
@@ -189,20 +189,23 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        console.log("event.key:", event.key);
+      if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        
         setCurrentDfsIndex((prevIndex) => {
-          console.log("prevIndex:", prevIndex);
           const newIndex =
             event.key === "ArrowLeft"
               ? Math.max(prevIndex - 1, 0)
               : Math.min(prevIndex + 1, dfsOrder.length - 1);
-          console.log("newIndex:", newIndex);
-          console.log("dfsOrder:", dfsOrder);
+          
           const nodeId = dfsOrder[newIndex];
           const node = nodes.find((n) => n.id === nodeId);
           if (node) {
-            setSelectedNode(node as FormattedDocumentNode);
+            const documentNode = node as unknown as DocumentNode;
+            setSelectedNode({
+              ...documentNode,
+              selectedChapter: null
+            });
             setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
           }
           return newIndex;
@@ -251,11 +254,11 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
-          data: { 
+          data: {
             ...n.data,
             isDragging: n.id === node.id,
             // 重置所有节点的目标状态
-            isPossibleTarget: false 
+            isPossibleTarget: false,
           },
         }))
       );
@@ -274,7 +277,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
         .map((n) => n.id);
 
       setPossibleTargets(possibleTargetIds);
-      
+
       // 更新可能的目标节点视觉效果
       setNodes((nds) =>
         nds.map((n) => ({
@@ -283,7 +286,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
             ...n.data,
             isPossibleTarget: possibleTargetIds.includes(n.id),
             // 保持当前拖拽节点的状态
-            isDragging: n.id === draggedNode.id 
+            isDragging: n.id === draggedNode.id,
           },
         }))
       );
@@ -324,7 +327,7 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
           refetch();
         } catch (error) {
           console.error("更新节点位置失败:", error);
-          showToast("更新节点位置失败，请重试", "error");
+          showToast("更新节点位置失败，��重试", "error");
         }
       }
     },
@@ -379,10 +382,10 @@ const ArticleTree: React.FC<DocumentTreeProps> = ({ mode }) => {
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
-          data: { 
-            ...n.data, 
-            isDragging: false, 
-            isPossibleTarget: false 
+          data: {
+            ...n.data,
+            isDragging: false,
+            isPossibleTarget: false,
           },
         }))
       );

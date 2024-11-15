@@ -44,8 +44,8 @@ import {
 
 const ChapterTree: React.FC = () => {
   const { selectedNode, setSelectedNode } = useDocumentContext();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const { fitView } = useReactFlow();
   const [layout, setLayout] = React.useState<"LR" | "TB">("LR");
 
@@ -153,9 +153,13 @@ const ChapterTree: React.FC = () => {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      // 检查是否按下了 Ctrl/Command + 方向键
+      if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && (event.ctrlKey || event.metaKey)) {
+        // 阻止默认行为
+        event.preventDefault();
+        
         const currentIndex = selectedNode?.selectedChapter?.id
-          ? dfsOrder.findIndex((id) => id === selectedNode?.selectedChapter?.id)
+          ? dfsOrder.findIndex((id) => id === selectedNode.selectedChapter.id)
           : 0;
 
         const newIndex =
@@ -165,10 +169,10 @@ const ChapterTree: React.FC = () => {
 
         const nodeId = dfsOrder[newIndex];
         const node = nodes.find((n) => n.id === nodeId);
-        if (node) {
+        if (node && selectedNode) {
           setSelectedNode({
             ...selectedNode,
-            selectedChapter: node,
+            selectedChapter: node
           });
           setEdges((eds) => updateEdgeStylesOnNodeClick(node.id, nodes, eds));
         }
