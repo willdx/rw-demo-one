@@ -4,6 +4,7 @@ services:
     platform: ${DOCKER_PLATFORM:-linux/amd64}
     ports:
       - "80:80"
+      - "2019:2019"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
     networks:

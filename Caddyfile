@@ -1,7 +1,5 @@
 {
     admin :2019
-    email willdx1992@gmail.com
-    debug
     auto_https off
 }
 
@@ -14,12 +12,12 @@
     }
 }
 
-rw.imdancer.com {
+http://rw.imdancer.com {
     reverse_proxy nextjs-app:3000
     import cors
 }
 
-neo4j.imdancer.com {
+http://neo4j.imdancer.com {
     reverse_proxy neo4j:7474
     import cors
 }
