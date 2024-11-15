@@ -545,14 +545,16 @@ const neoSchema = new Neo4jGraphQL({
           formData.append("port", process.env.NEO4J_PORT || "");
           formData.append("model", "通义千问");
           formData.append("source_type", "db_content");
-          formData.append(
-            "allowedNodes",
-            "Document,Application,DataCenter,Egress,Interface,Machine,Network,OS,Port,Process,Rack,Router,Service,Software,Switch,Type,Version,Zone"
-          );
-          formData.append(
-            "allowedRelationship",
-            "CONNECTS,CONTAINS,DEPENDS_ON,EXPOSES,HOLDS,INSTANCE,LISTENS,PREVIOUS,ROUTES,RUNS,TYPE,VERSION"
-          );
+          // formData.append(
+          //   "allowedNodes",
+          //   "Document,Application,DataCenter,Egress,Interface,Machine,Network,OS,Port,Process,Rack,Router,Service,Software,Switch,Type,Version,Zone"
+          // );
+          // formData.append(
+          //   "allowedRelationship",
+          //   "CONNECTS,CONTAINS,DEPENDS_ON,EXPOSES,HOLDS,INSTANCE,LISTENS,PREVIOUS,ROUTES,RUNS,TYPE,VERSION"
+          // );
+          formData.append("allowedNodes", ""); // 区别2
+          formData.append("allowedRelationship", ""); // 区别3
           formData.append("unique_id", documentId);
 
           await axios.post("http://localhost:8000/extract", formData, {
