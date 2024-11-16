@@ -16,6 +16,12 @@ const nextConfig = {
   // 启用图片优化
   images: {
     domains: ['your-domain.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'i.imgur.com',
+      },
+    ],
   },
 
   // 启用 SWC 编译器
