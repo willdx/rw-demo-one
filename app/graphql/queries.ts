@@ -160,21 +160,13 @@ export const createGetDocumentsQuery = (maxDepth: number) => gql`
 
 // 添加新的查询用于搜索可复用节点
 export const SEARCH_REUSABLE_DOCUMENTS = gql`
-  query searchReusableDocuments(
-    $searchTerm: String!
-    $page: Int!
-    $limit: Int!
-  ) {
-    searchReusableDocuments(
-      searchTerm: $searchTerm
-      page: $page
-      limit: $limit
-    ) {
+  query SearchReusableDocuments($searchTerm: String!, $page: Int!, $limit: Int!) {
+    searchReusableDocuments(searchTerm: $searchTerm, page: $page, limit: $limit) {
       documents {
         id
         fileName
         content
-        updatedAt
+        isPublished
       }
       totalCount
     }
