@@ -95,7 +95,7 @@ const VditorEditor: React.FC = () => {
     if (!editorRef.current) {
       editorRef.current = new Vditor("vditor", {
         height: "100%",
-        mode: "wysiwyg",
+        mode: "ir",
         theme: "classic",
         cache: {
           enable: false,
