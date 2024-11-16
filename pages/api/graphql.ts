@@ -117,11 +117,6 @@ const typeDefs = gql`
         }
       ]
       filter: [
-        {
-          operations: [READ, AGGREGATE]
-          requireAuthentication: false
-          where: { node: { publishedAt_GT: "1970-01-01T00:00:00.000Z" } }
-        }
         { where: { node: { creator: { id: "$jwt.sub" } } } }
         { where: { jwt: { roles_INCLUDES: "admin" } } }
       ]

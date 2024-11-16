@@ -85,7 +85,6 @@ export const SEARCH_DOCUMENTS = gql`
           id
           fileName
           content
-          updatedAt
           status
           isPublished
           creator {
