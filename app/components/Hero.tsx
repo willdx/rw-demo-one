@@ -8,7 +8,7 @@ export default function Hero() {
           <h1 className="text-6xl font-bold mb-10">高效的阅读和写作</h1>
           <h2 className="text-5xl mb-10">清晰的结构 + 简洁的内容</h2>
           <Link href="/share" className="btn btn-primary">
-            开始探索
+            开始使用
           </Link>
         </div>
       </div>

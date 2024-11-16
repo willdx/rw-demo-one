@@ -54,7 +54,7 @@ export default function Header() {
         </div>
         <div className="navbar-end">
           <Link href="/share" className="btn btn-ghost">
-            知识库
+            图书馆
           </Link>
           <div className="divider divider-horizontal" />
           {!isAuthReady ? (
