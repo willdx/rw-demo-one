@@ -14,7 +14,12 @@ interface Message {
 }
 
 export default function AiChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      type: "ai",
+      content: "Welcome to the 读写AI. You can ask questions related to documents which have been completely processed."
+    }
+  ]);
   const [inputMessage, setInputMessage] = useState("");
   const [aiChat, { loading }] = useMutation(AI_CHAT);
   const { user } = useAuth();
@@ -63,6 +68,19 @@ export default function AiChatPage() {
                 message.type === "user" ? "chat-end" : "chat-start"
               }`}
             >
+              <div className="chat-image avatar">
+                <div className="w-10 rounded-full">
+                  {message.type === "user" ? (
+                    <div className="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center">
+                      You
+                    </div>
+                  ) : (
+                    <div className="bg-secondary text-white rounded-full w-10 h-10 flex items-center justify-center">
+                      AI
+                    </div>
+                  )}
+                </div>
+              </div>
               <div
                 className={`chat-bubble ${
                   message.type === "user"
@@ -76,6 +94,13 @@ export default function AiChatPage() {
           ))}
           {loading && (
             <div className="chat chat-start">
+              <div className="chat-image avatar">
+                <div className="w-10 rounded-full">
+                  <div className="bg-secondary text-white rounded-full w-10 h-10 flex items-center justify-center">
+                    AI
+                  </div>
+                </div>
+              </div>
               <div className="chat-bubble chat-bubble-secondary">
                 <span className="loading loading-dots loading-sm"></span>
               </div>
