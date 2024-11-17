@@ -21,7 +21,7 @@ const ReadPage = ({ params }: { params: { id: string } }) => {
   const { selectedNode } = useDocumentContext();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"article" | "chapter">("article");
-  const [bgColor, setBgColor] = useState("#F7F7F7");
+  const [bgColor, setBgColor] = useState("#292A2F");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {

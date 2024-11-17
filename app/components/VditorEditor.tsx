@@ -40,11 +40,32 @@ const VditorEditor: React.FC = () => {
         const selectedChapter = selectedNodeRef.current.selectedChapter;
         if (selectedChapter) {
           const chapterContentFrom = selectedChapter?.data?.content;
+
+          // 只格式化章节内容，将多组连续的\n\n替换为单组\n\n
+          const normalizedChapterContent = chapterContentFrom
+            .replace(/(\n\n)+/g, "\n\n")
+            .trim();
+
+          // 输出调试信息
+          console.log("原始章节内容:", JSON.stringify(chapterContentFrom));
+          console.log(
+            "标准化后的章节内容:",
+            JSON.stringify(normalizedChapterContent)
+          );
+          console.log("新内容:", JSON.stringify(content));
+
+          // 使用标准化后的章节内容进行替换
           modifiedAritcleContent = articleContent.replace(
-            chapterContentFrom.trim(),
+            normalizedChapterContent,
             content.trim()
           );
+
+          console.log(
+            "更新后的完整内容:",
+            JSON.stringify(modifiedAritcleContent)
+          );
         }
+
         if (articleContent !== modifiedAritcleContent) {
           await updateDocumentContent({
             variables: {
@@ -55,7 +76,8 @@ const VditorEditor: React.FC = () => {
               },
             },
           });
-          setSelectedNode((prevNode: MarkdownNode | null) => {
+
+          setSelectedNode((prevNode: FormattedDocumentNode | null) => {
             if (prevNode) {
               return {
                 ...prevNode,
@@ -64,7 +86,7 @@ const VditorEditor: React.FC = () => {
                       ...selectedChapter,
                       data: {
                         ...selectedChapter.data,
-                        content: content,
+                        content: content.trim(),
                       },
                     }
                   : null,
@@ -74,12 +96,14 @@ const VditorEditor: React.FC = () => {
             }
             return prevNode;
           });
+
           setSaveStatus("已保存");
           contentModifiedRef.current = false;
+          showToast("文档保存成功", "success");
         }
       } catch (error) {
-        showToast("保存文档时出错", "error");
         console.error("保存文档时出错:", error);
+        showToast("保存文档时出错", "error");
         setSaveStatus("未保存");
       }
     }
